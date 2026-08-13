@@ -9,14 +9,7 @@ import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 // module aliases
-const Engine = Matter.Engine,
-      Render = Matter.Render,
-      Runner = Matter.Runner,
-      Bodies = Matter.Bodies,
-      Composite = Matter.Composite,
-      Constraint = Matter.Constraint,
-      Mouse = Matter.Mouse,
-      MouseConstraint = Matter.MouseConstraint;
+const { Engine, Render, Runner, World, Bodies, Body, Mouse, MouseConstraint, Events, Composite, Constraint } = Matter;
 
 // create an engine
 const engine = Engine.create();
@@ -82,8 +75,8 @@ const pill = Bodies.rectangle(cx + 120, cy + 30, 100, 40, {
 // Cross/X shape (thin lines)
 const line1 = Bodies.rectangle(cx, cy + 80, 4, 80, { render: { fillStyle: '#888888' } });
 const line2 = Bodies.rectangle(cx, cy + 80, 80, 4, { render: { fillStyle: '#888888' } });
-const cross = Body.create({ parts: [line1, line2], ...commonOptions });
-Body.setAngle(cross, Math.PI / 4); // Rotate 45 degrees to make X
+const cross = Matter.Body.create({ parts: [line1, line2], ...commonOptions });
+Matter.Body.setAngle(cross, Math.PI / 4); // Rotate 45 degrees to make X
 
 // Add constraints (the white lines in the image) connecting everything to the hub
 const createLink = (bodyA, bodyB) => {
@@ -126,7 +119,7 @@ Events.on(engine, 'beforeUpdate', function() {
     // 1. Attract the hub back to the center so the cluster doesn't drift away
     const dxCenter = cx - hub.position.x;
     const dyCenter = cy - hub.position.y;
-    Body.applyForce(hub, hub.position, {
+    Matter.Body.applyForce(hub, hub.position, {
         x: dxCenter * 0.0001,
         y: dyCenter * 0.0001
     });
@@ -140,7 +133,7 @@ Events.on(engine, 'beforeUpdate', function() {
             
             if (distance < 200) { // Interaction radius
                 const forceMagnitude = 0.0005 * (200 - distance);
-                Body.applyForce(body, body.position, {
+                Matter.Body.applyForce(body, body.position, {
                     x: (dx / distance) * forceMagnitude,
                     y: (dy / distance) * forceMagnitude
                 });
