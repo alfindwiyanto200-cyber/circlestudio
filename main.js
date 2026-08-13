@@ -34,13 +34,6 @@ const render = Render.create({
     }
 });
 
-const cx = window.innerWidth / 2;
-const cy = window.innerHeight / 2 - 150; // A bit higher for the top ring
-
-// The ring where tags are attached
-const ring = Bodies.circle(cx, cy, 20, { 
-    isStatic: true, 
-    render: { 
 const width = window.innerWidth;
 const height = window.innerHeight;
 
