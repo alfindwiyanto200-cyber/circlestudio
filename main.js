@@ -87,7 +87,7 @@ const matWhitePlastic = new THREE.MeshStandardMaterial({ color: 0xffffff, metaln
 const matYellowPlastic = new THREE.MeshStandardMaterial({ color: 0xffe81a, metalness: 0.1, roughness: 0.4 });
 
 // Helper to create physics object
-function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0)) {
+function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0), isRing = false) {
     scene.add(mesh);
     meshes.push({ mesh, offset });
 
@@ -97,7 +97,10 @@ function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0)) {
         position: new CANNON.Vec3(pos.x, pos.y, pos.z),
         material: physicsMaterial,
         linearDamping: 0.4,
-        angularDamping: 0.4
+        angularDamping: 0.4,
+        // Tags collide with tags (group 1). Ring is group 2.
+        collisionFilterGroup: isRing ? 2 : 1,
+        collisionFilterMask: isRing ? 0 : 1
     });
     world.addBody(body);
     bodies.push(body);
@@ -124,7 +127,7 @@ const ringRadius = 2.5;
 const ringTube = 0.15;
 const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, ringTube, 16, 64), matMetal);
 // Ring collision uses a thin cylinder or sphere approximation
-const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:8, z:0});
+const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:8, z:0}, new CANNON.Vec3(0,0,0), true);
 
 // Hinge ring to pivot
 const ringConstraint = new CANNON.PointToPointConstraint(
