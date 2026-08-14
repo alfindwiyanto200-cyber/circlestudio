@@ -109,15 +109,15 @@ function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0), isR
 
 // --- 1. Top Pivot & Carabiner ---
 // Static invisible pivot
-const pivotBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(0, 8, 0) });
+const pivotBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(0, 11, 0) });
 world.addBody(pivotBody);
 
 // Carabiner visuals (static)
 const carabinerGroup = new THREE.Group();
 const carTop = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), matMetal);
-carTop.position.y = 5;
+carTop.position.y = 8;
 const carBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.5), matMetal);
-carBodyMesh.position.y = 3.5;
+carBodyMesh.position.y = 6.5;
 carabinerGroup.add(carTop);
 carabinerGroup.add(carBodyMesh);
 scene.add(carabinerGroup);
@@ -127,7 +127,7 @@ const ringRadius = 2.5;
 const ringTube = 0.15;
 const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, ringTube, 16, 64), matMetal);
 // Ring collision uses a thin cylinder or sphere approximation
-const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:1, z:0}, new CANNON.Vec3(0,0,0), true);
+const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:4, z:0}, new CANNON.Vec3(0,0,0), true);
 
 // Hinge ring to pivot
 const ringConstraint = new CANNON.PointToPointConstraint(
@@ -139,7 +139,7 @@ world.addConstraint(ringConstraint);
 // Helper to create tags
 function createTag(mesh, shape, attachOffset, mass=1) {
     // spawn slightly randomly so they explode naturally
-    const pos = { x: (Math.random()-0.5)*2, y: -2 + Math.random()*2, z: (Math.random()-0.5)*2 };
+    const pos = { x: (Math.random()-0.5)*2, y: 1 + Math.random()*2, z: (Math.random()-0.5)*2 };
     const body = addPhysObj(mesh, mass, shape, pos);
     
     // Tiny metal ring attaching tag to main ring
