@@ -13,6 +13,8 @@ const { Engine, Render, Runner, World, Bodies, Body, Mouse, MouseConstraint, Eve
 
 // create an engine
 const engine = Engine.create();
+engine.world.gravity.y = 0;
+engine.world.gravity.x = 0;
 
 // create a renderer
 const container = document.getElementById('canvas-container');
