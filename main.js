@@ -102,17 +102,14 @@ World.add(engine.world, [
     link1, link2, link3, link4, link5
 ]);
 
-// Mouse interaction setup
-const mouse = Mouse.create(render.canvas);
-const mouseConstraint = MouseConstraint.create(engine, {
-    mouse: mouse,
-    constraint: {
-        stiffness: 0.2,
-        render: { visible: false }
-    }
+// Mouse interaction setup via window (to prevent scroll blocking on canvas)
+let mouseX = 0;
+let mouseY = 0;
+
+window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
 });
-World.add(engine.world, mouseConstraint);
-render.mouse = mouse;
 
 // Continuous update loop for custom forces
 Events.on(engine, 'beforeUpdate', function() {
@@ -125,10 +122,10 @@ Events.on(engine, 'beforeUpdate', function() {
     });
     
     // 2. Mouse repel force
-    if (mouse.position.x && mouse.position.y) {
+    if (mouseX && mouseY) {
         shapes.forEach((body) => {
-            const dx = body.position.x - mouse.position.x;
-            const dy = body.position.y - mouse.position.y;
+            const dx = body.position.x - mouseX;
+            const dy = body.position.y - mouseY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < 200) { // Interaction radius
