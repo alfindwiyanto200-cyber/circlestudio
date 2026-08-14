@@ -1,222 +1,308 @@
 import '@fontsource/playfair-display';
 import '@fontsource/caveat';
-import './style.css'
-import Matter from 'matter-js';
+import './style.css';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
-// module aliases
-const { Engine, Render, Runner, World, Bodies, Body, Mouse, MouseConstraint, Events, Composite, Constraint } = Matter;
-
-// create an engine
-const engine = Engine.create();
-engine.world.gravity.y = 0;
-engine.world.gravity.x = 0;
-
-// create a renderer
 const container = document.getElementById('canvas-container');
-const render = Render.create({
-    element: container,
-    engine: engine,
-    options: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        background: 'transparent',
-        wireframes: false
-    }
-});
-
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-// Create common properties
-const commonOptions = {
-    restitution: 0.2, // Lower bounciness
-    friction: 0.1,
-    frictionAir: 0.02,
-    density: 0.04
-};
+// --- Three.js Setup ---
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+camera.position.set(0, 0, 50);
 
-const cx = width / 2;
-const cy = height / 2;
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(width, height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+container.appendChild(renderer.domElement);
 
-// Central wireframe circle
-const hub = Bodies.circle(cx, cy, 30, {
-    ...commonOptions,
-    render: { fillStyle: 'transparent', strokeStyle: '#ffffff', lineWidth: 2 }
+// Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(10, 20, 10);
+scene.add(dirLight);
+
+// --- Cannon-es Setup ---
+const world = new CANNON.World({
+    gravity: new CANNON.Vec3(0, -30, 0), // Realistic downward gravity
 });
+world.solver.iterations = 10;
 
-// Yellow triangle
-const triangle = Bodies.polygon(cx - 80, cy - 50, 3, 50, {
-    ...commonOptions,
-    render: { fillStyle: '#ffe81a' }
-});
+// Materials
+const physicsMaterial = new CANNON.Material();
+const physicsContactMaterial = new CANNON.ContactMaterial(
+    physicsMaterial,
+    physicsMaterial,
+    {
+        friction: 0.3,
+        restitution: 0.6 // Bouncy collisions
+    }
+);
+world.addContactMaterial(physicsContactMaterial);
 
-// Gray rectangle
-const rect = Bodies.rectangle(cx - 30, cy - 80, 40, 120, {
-    ...commonOptions,
-    render: { fillStyle: '#888888' } // semi-dark gray
-});
+// --- Objects ---
+const meshes = [];
+const bodies = [];
 
-// Yellow circle
-const yellowCircle = Bodies.circle(cx + 80, cy + 20, 45, {
-    ...commonOptions,
-    render: { fillStyle: '#ffe81a' }
-});
+// Helper function to create objects
+function createObject(geometry, material, mass, shape, position) {
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+    meshes.push(mesh);
 
-// White pill shape
-const pill = Bodies.rectangle(cx + 120, cy + 30, 100, 40, {
-    ...commonOptions,
-    chamfer: { radius: 20 },
-    render: { fillStyle: '#f5f5f5' }
-});
-
-// Cross/X shape (thin lines)
-const line1 = Bodies.rectangle(cx, cy + 80, 4, 80, { render: { fillStyle: '#888888' } });
-const line2 = Bodies.rectangle(cx, cy + 80, 80, 4, { render: { fillStyle: '#888888' } });
-const cross = Matter.Body.create({ parts: [line1, line2], ...commonOptions });
-Matter.Body.setAngle(cross, Math.PI / 4); // Rotate 45 degrees to make X
-
-// Add constraints (the white lines in the image) connecting everything to the hub
-const createLink = (bodyA, bodyB) => {
-    return Constraint.create({
-        bodyA: bodyA,
-        bodyB: bodyB,
-        stiffness: 0.4,
-        length: 100,
-        render: { strokeStyle: '#888888', lineWidth: 1 }
+    const body = new CANNON.Body({
+        mass: mass,
+        shape: shape,
+        position: new CANNON.Vec3(position.x, position.y, position.z),
+        material: physicsMaterial,
+        linearDamping: 0.1,
+        angularDamping: 0.1
     });
+    world.addBody(body);
+    bodies.push(body);
+
+    return { mesh, body };
+}
+
+// Colors
+const colYellow = 0xffe81a;
+const colGray = 0x888888;
+const colWhite = 0xf5f5f5;
+
+// Shared Three.js materials
+const matYellow = new THREE.MeshStandardMaterial({ color: colYellow, roughness: 0.2, metalness: 0.2 });
+const matGray = new THREE.MeshStandardMaterial({ color: colGray, roughness: 0.3, metalness: 0.1 });
+const matWhite = new THREE.MeshStandardMaterial({ color: colWhite, roughness: 0.2, metalness: 0.1 });
+const matWire = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+
+// Pivot (Static Body at the top) - The anchor for the keychain
+const pivotBody = new CANNON.Body({
+    mass: 0,
+    shape: new CANNON.Sphere(0.1),
+    position: new CANNON.Vec3(0, 22, 0) // Positioned above the screen
+});
+world.addBody(pivotBody);
+
+// 1. Central Hub (Wireframe Sphere)
+const hubObj = createObject(
+    new THREE.SphereGeometry(2.5, 16, 16),
+    matWire,
+    5,
+    new CANNON.Sphere(2.5),
+    { x: 0, y: 10, z: 0 }
+);
+
+// Connect hub to pivot (The main keychain string)
+const constraintPivot = new CANNON.DistanceConstraint(pivotBody, hubObj.body, 12);
+world.addConstraint(constraintPivot);
+
+// 2. Yellow Triangle (Tetrahedron)
+const triObj = createObject(
+    new THREE.TetrahedronGeometry(3),
+    matYellow,
+    1,
+    new CANNON.Sphere(3), // Approximated collision for stability
+    { x: -5, y: 5, z: 0 }
+);
+
+// 3. Gray Rectangle (Box)
+const rectObj = createObject(
+    new THREE.BoxGeometry(2.5, 8, 2.5),
+    matGray,
+    1,
+    new CANNON.Box(new CANNON.Vec3(1.25, 4, 1.25)),
+    { x: -3, y: 5, z: -2 }
+);
+
+// 4. Yellow Circle (Sphere)
+const sphereObj = createObject(
+    new THREE.SphereGeometry(3, 32, 32),
+    matYellow,
+    1,
+    new CANNON.Sphere(3),
+    { x: 5, y: 7, z: 2 }
+);
+
+// 5. White Pill (Capsule)
+const pillObj = createObject(
+    new THREE.CapsuleGeometry(1.5, 4, 16, 16),
+    matWhite,
+    1,
+    new CANNON.Cylinder(1.5, 1.5, 7, 16),
+    { x: 7, y: 5, z: -2 }
+);
+
+// 6. Cross (Two intersecting boxes)
+const crossGeometry = new THREE.BoxGeometry(1, 6, 1);
+const crossMesh = new THREE.Mesh(crossGeometry, matGray);
+const crossMesh2 = new THREE.Mesh(crossGeometry, matGray);
+crossMesh2.rotation.z = Math.PI / 2;
+crossMesh.add(crossMesh2); // Child mesh
+scene.add(crossMesh);
+meshes.push(crossMesh);
+
+const crossBody = new CANNON.Body({ mass: 1, material: physicsMaterial, linearDamping: 0.1, angularDamping: 0.1, position: new CANNON.Vec3(0, 5, 5) });
+crossBody.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 3, 0.5)));
+crossBody.addShape(new CANNON.Box(new CANNON.Vec3(3, 0.5, 0.5)));
+world.addBody(crossBody);
+bodies.push(crossBody);
+
+// Link them all to the hub using DistanceConstraints to simulate loose string connections
+const createLink = (body1, body2, distance) => {
+    const constraint = new CANNON.DistanceConstraint(body1, body2, distance);
+    world.addConstraint(constraint);
 };
 
-const link1 = createLink(hub, triangle);
-const link2 = createLink(hub, rect);
-const link3 = createLink(hub, yellowCircle);
-const link4 = createLink(hub, pill);
-const link5 = createLink(hub, cross);
+createLink(hubObj.body, triObj.body, 8);
+createLink(hubObj.body, rectObj.body, 9);
+createLink(hubObj.body, sphereObj.body, 8);
+createLink(hubObj.body, pillObj.body, 10);
+createLink(hubObj.body, crossBody, 9);
 
-// Add everything to the world
-const shapes = [hub, triangle, rect, yellowCircle, pill, cross];
-World.add(engine.world, [
-    ...shapes,
-    link1, link2, link3, link4, link5
-]);
+// Add visual lines for the constraints (the keychain strings)
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+const constraintLines = [];
 
-// Mouse interaction setup via window (to prevent scroll blocking on canvas)
-let mouseX = 0;
-let mouseY = 0;
+function createVisualLine() {
+    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const line = new THREE.Line(geometry, lineMaterial);
+    scene.add(line);
+    constraintLines.push(line);
+    return line;
+}
+
+const lines = [
+    { bodyA: pivotBody, bodyB: hubObj.body, line: createVisualLine() },
+    { bodyA: hubObj.body, bodyB: triObj.body, line: createVisualLine() },
+    { bodyA: hubObj.body, bodyB: rectObj.body, line: createVisualLine() },
+    { bodyA: hubObj.body, bodyB: sphereObj.body, line: createVisualLine() },
+    { bodyA: hubObj.body, bodyB: pillObj.body, line: createVisualLine() },
+    { bodyA: hubObj.body, bodyB: crossBody, line: createVisualLine() }
+];
+
+// --- Mouse Interaction ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-100, -100);
 
 window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 });
 
-// Continuous update loop for custom forces
-Events.on(engine, 'beforeUpdate', function() {
-    // 1. Attract the hub back to the center so the cluster doesn't drift away
-    const dxCenter = cx - hub.position.x;
-    const dyCenter = cy - hub.position.y;
-    Matter.Body.applyForce(hub, hub.position, {
-        x: dxCenter * 0.0001,
-        y: dyCenter * 0.0001
-    });
+// --- Animation Loop ---
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = Math.min(clock.getDelta(), 0.1);
+    world.step(1/60, delta, 3);
+
+    // Mouse repel force for interaction
+    raycaster.setFromCamera(mouse, camera);
+    const planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(planeZ, target);
     
-    // 2. Mouse repel force
-    if (mouseX && mouseY) {
-        shapes.forEach((body) => {
-            const dx = body.position.x - mouseX;
-            const dy = body.position.y - mouseY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < 200) { // Interaction radius
-                const forceMagnitude = 0.0005 * (200 - distance);
-                Matter.Body.applyForce(body, body.position, {
-                    x: (dx / distance) * forceMagnitude,
-                    y: (dy / distance) * forceMagnitude
-                });
-            }
-        });
+    // Apply repel force to make it swing
+    bodies.forEach(body => {
+        // Skip the static pivot body
+        if(body.mass === 0) return;
+
+        const dx = body.position.x - target.x;
+        const dy = body.position.y - target.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 8) {
+            const force = (8 - dist) * 15;
+            body.applyForce(new CANNON.Vec3(dx/dist * force, dy/dist * force, -force*0.5), body.position);
+        }
+    });
+
+    // Sync bodies to meshes
+    for (let i = 0; i < meshes.length; i++) {
+        meshes[i].position.copy(bodies[i].position);
+        meshes[i].quaternion.copy(bodies[i].quaternion);
     }
-});
 
-// run the renderer
-Render.run(render);
+    // Update visual lines
+    lines.forEach(item => {
+        const positions = item.line.geometry.attributes.position.array;
+        positions[0] = item.bodyA.position.x;
+        positions[1] = item.bodyA.position.y;
+        positions[2] = item.bodyA.position.z;
+        positions[3] = item.bodyB.position.x;
+        positions[4] = item.bodyB.position.y;
+        positions[5] = item.bodyB.position.z;
+        item.line.geometry.attributes.position.needsUpdate = true;
+    });
 
-// create runner
-const runner = Runner.create();
-Runner.run(runner, engine);
+    renderer.render(scene, camera);
+}
 
-// Handle window resize
+animate();
+
+// Handle Window Resize
 window.addEventListener('resize', () => {
-    render.canvas.width = window.innerWidth;
-    render.canvas.height = window.innerHeight;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // Scroll Animation Observer
 const observerOptions = {
     root: null,
     rootMargin: '0px',
-    threshold: 0.2 // Trigger when 20% of the element is visible
+    threshold: 0.2
 };
-
 const observer = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.classList.add('is-visible');
-            // Optional: unobserve if we only want it to animate once
-            // observer.unobserve(entry.target);
         } else {
-            // Remove class when out of view so it animates again when scrolling back
             entry.target.classList.remove('is-visible');
         }
     });
 }, observerOptions);
 
-// Select all elements to animate
 const animatedElements = document.querySelectorAll('.animate-on-scroll');
 animatedElements.forEach(el => observer.observe(el));
 
 // GSAP ScrollTrigger for Featured Works
 const worksSlides = gsap.utils.toArray('.work-slide');
-
-// Set initial position of slide 2 and 3 to be fully below
 if (worksSlides.length > 1) {
     gsap.set(worksSlides.slice(1), { yPercent: 100 });
-
     const tl = gsap.timeline({
         scrollTrigger: {
             trigger: '.works-container',
             start: 'top top',
-            end: '+=100%', // Shorter scroll distance for easier scrolling
+            end: '+=100%',
             pin: true,
-            scrub: true, // true (instead of 1) makes it instantly responsive to trackpad/scroll without lag
+            scrub: true,
             anticipatePin: 1
         }
     });
-
-    // Animate slide 2 up
     tl.to(worksSlides[1], { yPercent: 0, ease: 'none' });
-    // Animate slide 3 up
     if (worksSlides.length > 2) {
         tl.to(worksSlides[2], { yPercent: 0, ease: 'none' });
     }
-
-    // Add click to scroll functionality to the tabs
-    // Note: ScrollTo offset calculation based on timeline progress
+    
     document.querySelector('.work-slide-1 .work-header').addEventListener('click', () => {
         gsap.to(window, {scrollTo: {y: '.works-container'}, duration: 1});
     });
-    
     document.querySelector('.work-slide-2 .work-header').addEventListener('click', () => {
-        // Scroll to middle of the pin duration
         const st = tl.scrollTrigger;
         gsap.to(window, {scrollTo: {y: st.start + (st.end - st.start) / 2}, duration: 1});
     });
-    
     document.querySelector('.work-slide-3 .work-header').addEventListener('click', () => {
-        // Scroll to end of the pin duration
         const st = tl.scrollTrigger;
         gsap.to(window, {scrollTo: {y: st.end}, duration: 1});
     });
