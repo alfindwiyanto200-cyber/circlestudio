@@ -25,169 +25,177 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
 
 // Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-dirLight.position.set(10, 20, 10);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(10, 20, 20);
 scene.add(dirLight);
 
 // --- Cannon-es Setup ---
 const world = new CANNON.World({
-    gravity: new CANNON.Vec3(0, -30, 0), // Realistic downward gravity
+    gravity: new CANNON.Vec3(0, -40, 0),
 });
-world.solver.iterations = 10;
+world.solver.iterations = 20;
 
-// Materials
 const physicsMaterial = new CANNON.Material();
 const physicsContactMaterial = new CANNON.ContactMaterial(
     physicsMaterial,
     physicsMaterial,
-    {
-        friction: 0.3,
-        restitution: 0.6 // Bouncy collisions
-    }
+    { friction: 0.1, restitution: 0.2 }
 );
 world.addContactMaterial(physicsContactMaterial);
 
-// --- Objects ---
 const meshes = [];
 const bodies = [];
 
-// Helper function to create objects
-function createObject(geometry, material, mass, shape, position) {
-    const mesh = new THREE.Mesh(geometry, material);
+// --- Procedural Texture Helper ---
+function createTextTexture(text, bgColor, textColor, w=512, h=512, fontSize=80, rotation=0, bold=true) {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.translate(w/2, h/2);
+    ctx.rotate(rotation * Math.PI / 180);
+    
+    ctx.font = `${bold ? 'bold' : 'normal'} ${fontSize}px "JetBrains Mono", sans-serif`;
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Support multiline
+    const lines = text.split('\n');
+    lines.forEach((line, i) => {
+        ctx.fillText(line, 0, (i - (lines.length-1)/2) * fontSize * 1.2);
+    });
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return texture;
+}
+
+// --- Materials ---
+const matMetal = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
+const matYellowTrans = new THREE.MeshPhysicalMaterial({ 
+    color: 0xffe81a, metalness: 0.1, roughness: 0.1, 
+    transparent: true, opacity: 0.9, transmission: 0.5, thickness: 0.5 
+});
+const matWhitePlastic = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.1, roughness: 0.4 });
+const matYellowPlastic = new THREE.MeshStandardMaterial({ color: 0xffe81a, metalness: 0.1, roughness: 0.4 });
+
+// Helper to create physics object
+function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0)) {
     scene.add(mesh);
-    meshes.push(mesh);
+    meshes.push({ mesh, offset });
 
     const body = new CANNON.Body({
         mass: mass,
         shape: shape,
-        position: new CANNON.Vec3(position.x, position.y, position.z),
+        position: new CANNON.Vec3(pos.x, pos.y, pos.z),
         material: physicsMaterial,
-        linearDamping: 0.1,
-        angularDamping: 0.1
+        linearDamping: 0.4,
+        angularDamping: 0.4
     });
     world.addBody(body);
     bodies.push(body);
-
-    return { mesh, body };
+    return body;
 }
 
-// Colors
-const colYellow = 0xffe81a;
-const colGray = 0x888888;
-const colWhite = 0xf5f5f5;
-
-// Shared Three.js materials
-const matYellow = new THREE.MeshStandardMaterial({ color: colYellow, roughness: 0.2, metalness: 0.2 });
-const matGray = new THREE.MeshStandardMaterial({ color: colGray, roughness: 0.3, metalness: 0.1 });
-const matWhite = new THREE.MeshStandardMaterial({ color: colWhite, roughness: 0.2, metalness: 0.1 });
-const matWire = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-
-// Pivot (Static Body at the top) - The anchor for the keychain
-const pivotBody = new CANNON.Body({
-    mass: 0,
-    shape: new CANNON.Sphere(0.1),
-    position: new CANNON.Vec3(0, 22, 0) // Positioned above the screen
-});
+// --- 1. Top Pivot & Carabiner ---
+// Static invisible pivot at the very top
+const pivotBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(0, 15, 0) });
 world.addBody(pivotBody);
 
-// 1. Central Hub (Wireframe Sphere)
-const hubObj = createObject(
-    new THREE.SphereGeometry(2.5, 16, 16),
-    matWire,
-    5,
-    new CANNON.Sphere(2.5),
-    { x: 0, y: 10, z: 0 }
+// Carabiner visuals (static)
+const carabinerGroup = new THREE.Group();
+const carTop = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), matMetal);
+carTop.position.y = 12;
+const carBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.5), matMetal);
+carBodyMesh.position.y = 10.5;
+carabinerGroup.add(carTop);
+carabinerGroup.add(carBodyMesh);
+scene.add(carabinerGroup);
+
+// --- 2. Main Keyring ---
+const ringRadius = 2.5;
+const ringTube = 0.15;
+const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, ringTube, 16, 64), matMetal);
+// Ring collision uses a thin cylinder or sphere approximation
+const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:8, z:0});
+
+// Hinge ring to pivot
+const ringConstraint = new CANNON.PointToPointConstraint(
+    pivotBody, new CANNON.Vec3(0, -4.5, 0),
+    ringBody, new CANNON.Vec3(0, ringRadius, 0)
 );
+world.addConstraint(ringConstraint);
 
-// Connect hub to pivot (The main keychain string)
-const constraintPivot = new CANNON.DistanceConstraint(pivotBody, hubObj.body, 12);
-world.addConstraint(constraintPivot);
-
-// 2. Yellow Triangle (Tetrahedron)
-const triObj = createObject(
-    new THREE.TetrahedronGeometry(3),
-    matYellow,
-    1,
-    new CANNON.Sphere(3), // Approximated collision for stability
-    { x: -5, y: 5, z: 0 }
-);
-
-// 3. Gray Rectangle (Box)
-const rectObj = createObject(
-    new THREE.BoxGeometry(2.5, 8, 2.5),
-    matGray,
-    1,
-    new CANNON.Box(new CANNON.Vec3(1.25, 4, 1.25)),
-    { x: -3, y: 5, z: -2 }
-);
-
-// 4. Yellow Circle (Sphere)
-const sphereObj = createObject(
-    new THREE.SphereGeometry(3, 32, 32),
-    matYellow,
-    1,
-    new CANNON.Sphere(3),
-    { x: 5, y: 7, z: 2 }
-);
-
-// 5. White Pill (Capsule)
-const pillObj = createObject(
-    new THREE.CapsuleGeometry(1.5, 4, 16, 16),
-    matWhite,
-    1,
-    new CANNON.Cylinder(1.5, 1.5, 7, 16),
-    { x: 7, y: 5, z: -2 }
-);
-
-// 6. Cross (Two intersecting boxes)
-const crossGeometry = new THREE.BoxGeometry(1, 6, 1);
-const crossMesh = new THREE.Mesh(crossGeometry, matGray);
-const crossMesh2 = new THREE.Mesh(crossGeometry, matGray);
-crossMesh2.rotation.z = Math.PI / 2;
-crossMesh.add(crossMesh2); // Child mesh
-scene.add(crossMesh);
-meshes.push(crossMesh);
-
-const crossBody = new CANNON.Body({ mass: 1, material: physicsMaterial, linearDamping: 0.1, angularDamping: 0.1, position: new CANNON.Vec3(0, 5, 5) });
-crossBody.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 3, 0.5)));
-crossBody.addShape(new CANNON.Box(new CANNON.Vec3(3, 0.5, 0.5)));
-world.addBody(crossBody);
-bodies.push(crossBody);
-
-// Link them all to the hub using DistanceConstraints to simulate loose string connections
-const createLink = (body1, body2, distance) => {
-    const constraint = new CANNON.DistanceConstraint(body1, body2, distance);
-    world.addConstraint(constraint);
-};
-
-createLink(hubObj.body, triObj.body, 8);
-createLink(hubObj.body, rectObj.body, 9);
-createLink(hubObj.body, sphereObj.body, 8);
-createLink(hubObj.body, pillObj.body, 10);
-createLink(hubObj.body, crossBody, 9);
-
-// Add visual lines for the constraints (the keychain strings)
-const lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-const constraintLines = [];
-
-function createVisualLine() {
-    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-    const line = new THREE.Line(geometry, lineMaterial);
-    scene.add(line);
-    constraintLines.push(line);
-    return line;
+// Helper to create tags
+function createTag(mesh, shape, attachOffset, mass=1) {
+    // spawn slightly randomly so they explode naturally
+    const pos = { x: (Math.random()-0.5)*2, y: 5 + Math.random()*2, z: (Math.random()-0.5)*2 };
+    const body = addPhysObj(mesh, mass, shape, pos);
+    
+    // Tiny metal ring attaching tag to main ring
+    const tinyRing = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 16), matMetal);
+    mesh.add(tinyRing);
+    tinyRing.position.copy(attachOffset);
+    tinyRing.position.y += 0.4;
+    
+    // Connect top of tag to bottom of main ring
+    const c = new CANNON.PointToPointConstraint(
+        ringBody, new CANNON.Vec3((Math.random()-0.5), -ringRadius, (Math.random()-0.5)),
+        body, new CANNON.Vec3(attachOffset.x, attachOffset.y + 0.4, attachOffset.z)
+    );
+    world.addConstraint(c);
+    return body;
 }
 
-const lines = [
-    { bodyA: pivotBody, bodyB: hubObj.body, line: createVisualLine() },
-    { bodyA: hubObj.body, bodyB: triObj.body, line: createVisualLine() },
-    { bodyA: hubObj.body, bodyB: rectObj.body, line: createVisualLine() },
-    { bodyA: hubObj.body, bodyB: sphereObj.body, line: createVisualLine() },
-    { bodyA: hubObj.body, bodyB: pillObj.body, line: createVisualLine() },
-    { bodyA: hubObj.body, bodyB: crossBody, line: createVisualLine() }
-];
+// --- 3. Yellow Triangle (motion) ---
+const triGeom = new THREE.CylinderGeometry(3.5, 3.5, 0.3, 3);
+triGeom.rotateX(Math.PI/2);
+triGeom.rotateZ(Math.PI);
+const texTri = createTextTexture("motion\n01", "#ffe81a", "#ffffff", 512, 512, 70, 0, true);
+const matTriArray = [matYellowTrans, matYellowTrans, new THREE.MeshStandardMaterial({map: texTri, transparent:true, opacity:0.9})];
+const triMesh = new THREE.Mesh(triGeom, matTriArray);
+createTag(triMesh, new CANNON.Box(new CANNON.Vec3(2.5, 2.5, 0.2)), new THREE.Vector3(0, 2.5, 0));
+
+// --- 4. White Pill (02) ---
+function createPillGeom(w, h, r) {
+    const s = new THREE.Shape();
+    s.moveTo(-w, h-r); s.quadraticCurveTo(-w, h, -w+r, h);
+    s.lineTo(w-r, h); s.quadraticCurveTo(w, h, w, h-r);
+    s.lineTo(w, -h+r); s.quadraticCurveTo(w, -h, w-r, -h);
+    s.lineTo(-w+r, -h); s.quadraticCurveTo(-w, -h, -w, -h+r);
+    return new THREE.ExtrudeGeometry(s, { depth: 0.3, bevelEnabled: true, bevelSize: 0.1, bevelThickness: 0.1 });
+}
+const pillGeom = createPillGeom(1.5, 3.5, 1.5);
+const texPill = createTextTexture("02", "#ffffff", "#000000", 256, 512, 100);
+const pillMesh = new THREE.Mesh(pillGeom, new THREE.MeshStandardMaterial({map: texPill, color: 0xffffff, roughness: 0.3}));
+createTag(pillMesh, new CANNON.Box(new CANNON.Vec3(1.5, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
+
+// --- 5. Editorial 03 (Rect) ---
+const edGeom = new THREE.BoxGeometry(2, 7, 0.4);
+const texEd = createTextTexture("Editorial 03", "#ffffff", "#a0a0a0", 256, 1024, 80, -90);
+const edMesh = new THREE.Mesh(edGeom, new THREE.MeshStandardMaterial({map: texEd}));
+createTag(edMesh, new CANNON.Box(new CANNON.Vec3(1, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
+
+// --- 6. Photo (Rect) ---
+const phGeom = new THREE.BoxGeometry(2.2, 6, 0.4);
+const texPh = createTextTexture("Photo", "#ffffff", "#a0a0a0", 256, 1024, 100, -90);
+const phMesh = new THREE.Mesh(phGeom, new THREE.MeshStandardMaterial({map: texPh}));
+createTag(phMesh, new CANNON.Box(new CANNON.Vec3(1.1, 3, 0.2)), new THREE.Vector3(0, 3, 0));
+
+// --- 7. Yellow Blob/Cat ---
+// Approximated by a bumpy circle
+const blobGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.4, 32);
+blobGeom.rotateX(Math.PI/2);
+const texBlob = createTextTexture("^__^", "#ffe81a", "#d4b300", 512, 512, 100);
+const blobMesh = new THREE.Mesh(blobGeom, new THREE.MeshStandardMaterial({map: texBlob, color: 0xffe81a}));
+createTag(blobMesh, new CANNON.Cylinder(2.5, 2.5, 0.4, 16), new THREE.Vector3(0, 2.2, 0));
 
 // --- Mouse Interaction ---
 const raycaster = new THREE.Raycaster();
@@ -207,47 +215,33 @@ function animate() {
     const delta = Math.min(clock.getDelta(), 0.1);
     world.step(1/60, delta, 3);
 
-    // Mouse repel force for interaction
+    // Mouse repel force
     raycaster.setFromCamera(mouse, camera);
     const planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const target = new THREE.Vector3();
     raycaster.ray.intersectPlane(planeZ, target);
     
-    // Apply repel force to make it swing
     bodies.forEach(body => {
-        // Skip the static pivot body
         if(body.mass === 0) return;
-
         const dx = body.position.x - target.x;
         const dy = body.position.y - target.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         if(dist < 8) {
-            const force = (8 - dist) * 15;
-            body.applyForce(new CANNON.Vec3(dx/dist * force, dy/dist * force, -force*0.5), body.position);
+            const force = (8 - dist) * 12; // Swings tags naturally
+            body.applyForce(new CANNON.Vec3(dx/dist * force, dy/dist * force, -force*0.2), body.position);
         }
     });
 
     // Sync bodies to meshes
     for (let i = 0; i < meshes.length; i++) {
-        meshes[i].position.copy(bodies[i].position);
-        meshes[i].quaternion.copy(bodies[i].quaternion);
+        const item = meshes[i];
+        
+        item.mesh.position.copy(bodies[i].position);
+        item.mesh.quaternion.copy(bodies[i].quaternion);
     }
-
-    // Update visual lines
-    lines.forEach(item => {
-        const positions = item.line.geometry.attributes.position.array;
-        positions[0] = item.bodyA.position.x;
-        positions[1] = item.bodyA.position.y;
-        positions[2] = item.bodyA.position.z;
-        positions[3] = item.bodyB.position.x;
-        positions[4] = item.bodyB.position.y;
-        positions[5] = item.bodyB.position.z;
-        item.line.geometry.attributes.position.needsUpdate = true;
-    });
 
     renderer.render(scene, camera);
 }
-
 animate();
 
 // Handle Window Resize
@@ -258,23 +252,14 @@ window.addEventListener('resize', () => {
 });
 
 // Scroll Animation Observer
-const observerOptions = {
-    root: null,
-    rootMargin: '0px',
-    threshold: 0.2
-};
+const observerOptions = { root: null, rootMargin: '0px', threshold: 0.2 };
 const observer = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-        } else {
-            entry.target.classList.remove('is-visible');
-        }
+        if (entry.isIntersecting) entry.target.classList.add('is-visible');
+        else entry.target.classList.remove('is-visible');
     });
 }, observerOptions);
-
-const animatedElements = document.querySelectorAll('.animate-on-scroll');
-animatedElements.forEach(el => observer.observe(el));
+document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
 
 // GSAP ScrollTrigger for Featured Works
 const worksSlides = gsap.utils.toArray('.work-slide');
@@ -291,19 +276,9 @@ if (worksSlides.length > 1) {
         }
     });
     tl.to(worksSlides[1], { yPercent: 0, ease: 'none' });
-    if (worksSlides.length > 2) {
-        tl.to(worksSlides[2], { yPercent: 0, ease: 'none' });
-    }
+    if (worksSlides.length > 2) tl.to(worksSlides[2], { yPercent: 0, ease: 'none' });
     
-    document.querySelector('.work-slide-1 .work-header').addEventListener('click', () => {
-        gsap.to(window, {scrollTo: {y: '.works-container'}, duration: 1});
-    });
-    document.querySelector('.work-slide-2 .work-header').addEventListener('click', () => {
-        const st = tl.scrollTrigger;
-        gsap.to(window, {scrollTo: {y: st.start + (st.end - st.start) / 2}, duration: 1});
-    });
-    document.querySelector('.work-slide-3 .work-header').addEventListener('click', () => {
-        const st = tl.scrollTrigger;
-        gsap.to(window, {scrollTo: {y: st.end}, duration: 1});
-    });
+    document.querySelector('.work-slide-1 .work-header').addEventListener('click', () => gsap.to(window, {scrollTo: {y: '.works-container'}, duration: 1}));
+    document.querySelector('.work-slide-2 .work-header').addEventListener('click', () => gsap.to(window, {scrollTo: {y: tl.scrollTrigger.start + (tl.scrollTrigger.end - tl.scrollTrigger.start) / 2}, duration: 1}));
+    document.querySelector('.work-slide-3 .work-header').addEventListener('click', () => gsap.to(window, {scrollTo: {y: tl.scrollTrigger.end}, duration: 1}));
 }
