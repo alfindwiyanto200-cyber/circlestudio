@@ -79,11 +79,12 @@ function createTextTexture(text, bgColor, textColor, w=512, h=512, fontSize=80, 
 
 // --- Materials ---
 const matMetal = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
-const matOrangeMetal = new THREE.MeshStandardMaterial({ color: 0xff6600, metalness: 0.6, roughness: 0.2 });
-const matOrangeTrans = new THREE.MeshPhysicalMaterial({ 
-    color: 0xff8800, metalness: 0.1, roughness: 0.1, 
-    transparent: true, opacity: 0.9, transmission: 0.8, thickness: 0.5 
+const matYellowTrans = new THREE.MeshPhysicalMaterial({ 
+    color: 0xffe81a, metalness: 0.1, roughness: 0.1, 
+    transparent: true, opacity: 0.9, transmission: 0.5, thickness: 0.5 
 });
+const matWhitePlastic = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.1, roughness: 0.4 });
+const matYellowPlastic = new THREE.MeshStandardMaterial({ color: 0xffe81a, metalness: 0.1, roughness: 0.4 });
 
 // Helper to create physics object
 function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0), isRing = false) {
@@ -111,11 +112,11 @@ function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0), isR
 const pivotBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(0, 11, 0) });
 world.addBody(pivotBody);
 
-// Carabiner visuals (static) - Using Orange Metal
+// Carabiner visuals (static)
 const carabinerGroup = new THREE.Group();
-const carTop = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), matOrangeMetal);
+const carTop = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), matMetal);
 carTop.position.y = 8;
-const carBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.5), matOrangeMetal);
+const carBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.5), matMetal);
 carBodyMesh.position.y = 6.5;
 carabinerGroup.add(carTop);
 carabinerGroup.add(carBodyMesh);
@@ -124,7 +125,7 @@ scene.add(carabinerGroup);
 // --- 2. Main Keyring ---
 const ringRadius = 2.5;
 const ringTube = 0.15;
-const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, ringTube, 16, 64), matOrangeMetal);
+const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, ringTube, 16, 64), matMetal);
 // Ring collision uses a thin cylinder or sphere approximation
 const ringBody = addPhysObj(ringMesh, 2, new CANNON.Sphere(ringRadius), {x:0, y:4, z:0}, new CANNON.Vec3(0,0,0), true);
 
@@ -142,7 +143,7 @@ function createTag(mesh, shape, attachOffset, mass=1) {
     const body = addPhysObj(mesh, mass, shape, pos);
     
     // Tiny metal ring attaching tag to main ring
-    const tinyRing = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 16), matOrangeMetal);
+    const tinyRing = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 16), matMetal);
     mesh.add(tinyRing);
     tinyRing.position.copy(attachOffset);
     tinyRing.position.y += 0.4;
@@ -156,68 +157,48 @@ function createTag(mesh, shape, attachOffset, mass=1) {
     return body;
 }
 
-// --- 3. The Orange 'C' Tags ---
-function createOrangeCTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    
-    ctx.clearRect(0, 0, 512, 512);
-    
-    // Outer ring
-    ctx.strokeStyle = '#ff6600';
-    ctx.lineWidth = 20;
-    ctx.beginPath();
-    ctx.arc(256, 256, 230, 0, Math.PI * 2);
-    ctx.stroke();
+// --- 3. Yellow Triangle (motion) ---
+const triGeom = new THREE.CylinderGeometry(3.5, 3.5, 0.3, 3);
+triGeom.rotateX(Math.PI/2);
+triGeom.rotateZ(Math.PI);
+const texTri = createTextTexture("motion\n01", "#ffe81a", "#ffffff", 512, 512, 70, 0, true);
+const matTriArray = [matYellowTrans, matYellowTrans, new THREE.MeshStandardMaterial({map: texTri, transparent:true, opacity:0.9})];
+const triMesh = new THREE.Mesh(triGeom, matTriArray);
+createTag(triMesh, new CANNON.Box(new CANNON.Vec3(2.5, 2.5, 0.2)), new THREE.Vector3(0, 2.5, 0));
 
-    // Inner ring
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.arc(256, 256, 170, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // The 'C'
-    ctx.fillStyle = '#ff6600';
-    ctx.font = 'bold 300px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('C', 256, 280);
-
-    return new THREE.CanvasTexture(canvas);
+// --- 4. White Pill (02) ---
+function createPillGeom(w, h, r) {
+    const s = new THREE.Shape();
+    s.moveTo(-w, h-r); s.quadraticCurveTo(-w, h, -w+r, h);
+    s.lineTo(w-r, h); s.quadraticCurveTo(w, h, w, h-r);
+    s.lineTo(w, -h+r); s.quadraticCurveTo(w, -h, w-r, -h);
+    s.lineTo(-w+r, -h); s.quadraticCurveTo(-w, -h, -w, -h+r);
+    return new THREE.ExtrudeGeometry(s, { depth: 0.3, bevelEnabled: true, bevelSize: 0.1, bevelThickness: 0.1 });
 }
+const pillGeom = createPillGeom(1.5, 3.5, 1.5);
+const texPill = createTextTexture("02", "#ffffff", "#000000", 256, 512, 100);
+const pillMesh = new THREE.Mesh(pillGeom, new THREE.MeshStandardMaterial({map: texPill, color: 0xffffff, roughness: 0.3}));
+createTag(pillMesh, new CANNON.Box(new CANNON.Vec3(1.5, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
 
-const texOrangeC = createOrangeCTexture();
+// --- 5. Editorial 03 (Rect) ---
+const edGeom = new THREE.BoxGeometry(2, 7, 0.4);
+const texEd = createTextTexture("Editorial 03", "#ffffff", "#a0a0a0", 256, 1024, 80, -90);
+const edMesh = new THREE.Mesh(edGeom, new THREE.MeshStandardMaterial({map: texEd}));
+createTag(edMesh, new CANNON.Box(new CANNON.Vec3(1, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
 
-// Create 3 identical orange C tags
-for(let i = 0; i < 3; i++) {
-    const cMatFace = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff, // White base so the canvas texture colors pop
-        map: texOrangeC,
-        transparent: true,
-        transmission: 0.8,
-        opacity: 0.9,
-        roughness: 0.1,
-        metalness: 0.1
-    });
-    const cMatEdge = new THREE.MeshPhysicalMaterial({
-        color: 0xff6600,
-        transparent: true,
-        transmission: 0.8,
-        opacity: 0.8,
-        roughness: 0.1,
-        metalness: 0.1
-    });
+// --- 6. Photo (Rect) ---
+const phGeom = new THREE.BoxGeometry(2.2, 6, 0.4);
+const texPh = createTextTexture("Photo", "#ffffff", "#a0a0a0", 256, 1024, 100, -90);
+const phMesh = new THREE.Mesh(phGeom, new THREE.MeshStandardMaterial({map: texPh}));
+createTag(phMesh, new CANNON.Box(new CANNON.Vec3(1.1, 3, 0.2)), new THREE.Vector3(0, 3, 0));
 
-    const cGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.2, 64);
-    const cMesh = new THREE.Mesh(cGeom, [cMatEdge, cMatFace, cMatFace]);
-    cMesh.rotateX(Math.PI/2);
-    
-    // The physics shape is a Cylinder, wait Cannon's Cylinder goes along Y axis, 
-    // so we need a Cylinder physics shape but maybe a Box is easier and perfectly fine
-    createTag(cMesh, new CANNON.Box(new CANNON.Vec3(2.5, 2.5, 0.1)), new THREE.Vector3(0, 2.5, 0));
-}
+// --- 7. Yellow Blob/Cat ---
+// Approximated by a bumpy circle
+const blobGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.4, 32);
+blobGeom.rotateX(Math.PI/2);
+const texBlob = createTextTexture("^__^", "#ffe81a", "#d4b300", 512, 512, 100);
+const blobMesh = new THREE.Mesh(blobGeom, new THREE.MeshStandardMaterial({map: texBlob, color: 0xffe81a}));
+createTag(blobMesh, new CANNON.Cylinder(2.5, 2.5, 0.4, 16), new THREE.Vector3(0, 2.2, 0));
 
 // --- Mouse Interaction ---
 const raycaster = new THREE.Raycaster();
