@@ -113,15 +113,36 @@ function addPhysObj(mesh, mass, shape, pos, offset = new CANNON.Vec3(0,0,0), isR
 const pivotBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(0, 11, 0) });
 world.addBody(pivotBody);
 
-// Carabiner visuals (static)
+// Carabiner visuals (static) - Loaded from GLB
 const carabinerGroup = new THREE.Group();
-const carTop = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), matMetal);
-carTop.position.y = 8;
-const carBodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.5), matMetal);
-carBodyMesh.position.y = 6.5;
-carabinerGroup.add(carTop);
-carabinerGroup.add(carBodyMesh);
 scene.add(carabinerGroup);
+
+new GLTFLoader().load('/keychain_carabiner_4k_style.glb', (gltf) => {
+    const originalMesh = gltf.scene;
+    
+    const box = new THREE.Box3().setFromObject(originalMesh);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    
+    const targetHeight = 4.5;
+    let scale = targetHeight / size.y;
+    if(!isFinite(scale) || scale === 0) scale = 1;
+    
+    originalMesh.scale.set(scale, scale, scale);
+    
+    box.setFromObject(originalMesh);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    
+    originalMesh.position.set(-center.x, -center.y, -center.z);
+    
+    // Position the group so the carabiner rests exactly above the main ring
+    // Main ring is at y=4, so let's put carabiner center around y=7.5
+    carabinerGroup.position.set(0, 7.5, 0);
+    carabinerGroup.add(originalMesh);
+}, undefined, (error) => {
+    console.error('Error loading carabiner model:', error);
+});
 
 // --- 2. Main Keyring ---
 const ringRadius = 2.5;
