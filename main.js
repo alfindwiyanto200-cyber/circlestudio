@@ -7,6 +7,7 @@ import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
@@ -157,48 +158,53 @@ function createTag(mesh, shape, attachOffset, mass=1) {
     return body;
 }
 
-// --- 3. Yellow Triangle (motion) ---
-const triGeom = new THREE.CylinderGeometry(3.5, 3.5, 0.3, 3);
-triGeom.rotateX(Math.PI/2);
-triGeom.rotateZ(Math.PI);
-const texTri = createTextTexture("motion\n01", "#ffe81a", "#ffffff", 512, 512, 70, 0, true);
-const matTriArray = [matYellowTrans, matYellowTrans, new THREE.MeshStandardMaterial({map: texTri, transparent:true, opacity:0.9})];
-const triMesh = new THREE.Mesh(triGeom, matTriArray);
-createTag(triMesh, new CANNON.Box(new CANNON.Vec3(2.5, 2.5, 0.2)), new THREE.Vector3(0, 2.5, 0));
+// --- 3. Custom GLTF Tags ---
+const gltfLoader = new GLTFLoader();
+gltfLoader.load('/CIRCLE_keychain.glb', (gltf) => {
+    const originalMesh = gltf.scene;
+    
+    // Calculate bounding box to get precise size
+    const box = new THREE.Box3().setFromObject(originalMesh);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    
+    // Scale down if it's too massive (e.g. if it was made in cm/mm instead of meters)
+    // Most models are arbitrary size. Let's aim for a height of around 6 units.
+    const targetHeight = 6;
+    let scale = targetHeight / size.y;
+    if(!isFinite(scale) || scale === 0) scale = 1;
 
-// --- 4. White Pill (02) ---
-function createPillGeom(w, h, r) {
-    const s = new THREE.Shape();
-    s.moveTo(-w, h-r); s.quadraticCurveTo(-w, h, -w+r, h);
-    s.lineTo(w-r, h); s.quadraticCurveTo(w, h, w, h-r);
-    s.lineTo(w, -h+r); s.quadraticCurveTo(w, -h, w-r, -h);
-    s.lineTo(-w+r, -h); s.quadraticCurveTo(-w, -h, -w, -h+r);
-    return new THREE.ExtrudeGeometry(s, { depth: 0.3, bevelEnabled: true, bevelSize: 0.1, bevelThickness: 0.1 });
-}
-const pillGeom = createPillGeom(1.5, 3.5, 1.5);
-const texPill = createTextTexture("02", "#ffffff", "#000000", 256, 512, 100);
-const pillMesh = new THREE.Mesh(pillGeom, new THREE.MeshStandardMaterial({map: texPill, color: 0xffffff, roughness: 0.3}));
-createTag(pillMesh, new CANNON.Box(new CANNON.Vec3(1.5, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
+    originalMesh.scale.set(scale, scale, scale);
+    
+    // Recompute bounding box after scale
+    box.setFromObject(originalMesh);
+    box.getSize(size);
+    box.getCenter(center);
+    
+    // Offset the mesh so its center of mass is exactly at (0,0,0)
+    originalMesh.position.set(-center.x, -center.y, -center.z);
+    
+    // Wrap it in a group so the pivot point is strictly its volumetric center
+    const wrapper = new THREE.Group();
+    wrapper.add(originalMesh);
 
-// --- 5. Editorial 03 (Rect) ---
-const edGeom = new THREE.BoxGeometry(2, 7, 0.4);
-const texEd = createTextTexture("Editorial 03", "#ffffff", "#a0a0a0", 256, 1024, 80, -90);
-const edMesh = new THREE.Mesh(edGeom, new THREE.MeshStandardMaterial({map: texEd}));
-createTag(edMesh, new CANNON.Box(new CANNON.Vec3(1, 3.5, 0.2)), new THREE.Vector3(0, 3.5, 0));
-
-// --- 6. Photo (Rect) ---
-const phGeom = new THREE.BoxGeometry(2.2, 6, 0.4);
-const texPh = createTextTexture("Photo", "#ffffff", "#a0a0a0", 256, 1024, 100, -90);
-const phMesh = new THREE.Mesh(phGeom, new THREE.MeshStandardMaterial({map: texPh}));
-createTag(phMesh, new CANNON.Box(new CANNON.Vec3(1.1, 3, 0.2)), new THREE.Vector3(0, 3, 0));
-
-// --- 7. Yellow Blob/Cat ---
-// Approximated by a bumpy circle
-const blobGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.4, 32);
-blobGeom.rotateX(Math.PI/2);
-const texBlob = createTextTexture("^__^", "#ffe81a", "#d4b300", 512, 512, 100);
-const blobMesh = new THREE.Mesh(blobGeom, new THREE.MeshStandardMaterial({map: texBlob, color: 0xffe81a}));
-createTag(blobMesh, new CANNON.Cylinder(2.5, 2.5, 0.4, 16), new THREE.Vector3(0, 2.2, 0));
+    // Make 3 instances of the user's custom design
+    for(let i=0; i<3; i++) {
+        const clone = wrapper.clone();
+        
+        // Physics shape based on bounding box
+        const shape = new CANNON.Box(new CANNON.Vec3(size.x/2, size.y/2, size.z/2));
+        
+        // Attach at the top of the bounding box
+        const attachOffset = new THREE.Vector3(0, size.y/2, 0);
+        
+        createTag(clone, shape, attachOffset, 2);
+    }
+}, undefined, (error) => {
+    console.error('Error loading GLTF model:', error);
+});
 
 // --- Mouse Interaction ---
 const raycaster = new THREE.Raycaster();
