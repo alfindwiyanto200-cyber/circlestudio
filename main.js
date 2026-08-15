@@ -160,7 +160,7 @@ function createTag(mesh, shape, attachOffset, mass=1) {
 
 // --- 3. Custom GLTF Tags ---
 const gltfLoader = new GLTFLoader();
-gltfLoader.load('/CIRCLE_keychain.glb', (gltf) => {
+gltfLoader.load('/CIRCLE_keychain_acrylic.glb', (gltf) => {
     const originalMesh = gltf.scene;
     
     // Calculate bounding box to get precise size
