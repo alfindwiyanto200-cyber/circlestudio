@@ -18,10 +18,10 @@ export default function StatusBar() {
   }, []);
 
   return (
-    <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end z-10 pointer-events-none text-[#111111]">
+    <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end z-10 pointer-events-none text-white">
       {/* Left: Clock */}
       <div className="text-xs font-mono font-medium tracking-wide">
-        <span className="text-gray-400 mr-2">GMT-7</span>
+        <span className="text-white/50 mr-2">GMT+7</span>
         {time || '--:--'}
       </div>
 

@@ -3,7 +3,7 @@ import { Sun } from 'lucide-react'; // Using Sun as a substitute for radial flar
 
 export default function TopBar() {
   return (
-    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-auto text-[#111111]">
+    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-auto text-white">
       {/* Logo */}
       <div className="flex items-center gap-2">
         <Sun className="text-red-500" size={28} strokeWidth={2.5} />
@@ -21,7 +21,7 @@ export default function TopBar() {
       </nav>
 
       {/* CTA */}
-      <button className="bg-[#111111] text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors shadow-lg">
+      <button className="bg-white text-black px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors shadow-lg">
         Book a call
       </button>
     </div>
