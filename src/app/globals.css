@@ -6,43 +6,15 @@
 }
 
 :root {
-  --background: #081452;
-  --foreground: #ffffff;
+  --background: #FAFAFA;
+  --foreground: #111111;
 }
 
 body {
   color: var(--foreground);
-  background: radial-gradient(circle at center, #0a1b70 0%, #040a29 100%);
+  background: var(--background);
   margin: 0;
   overflow: hidden;
-  font-family: var(--font-mono), monospace;
+  font-family: var(--font-sans), sans-serif;
 }
 
-/* Blueprint Grid Background */
-.blueprint-grid {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  pointer-events: none;
-  background-size: 100px 100px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-}
-
-/* Add cross (+) marks at intersections */
-.blueprint-grid::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: 100px 100px;
-  background-image: 
-    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.3) 1px, transparent 1.5px);
-  background-position: -1px -1px;
-}

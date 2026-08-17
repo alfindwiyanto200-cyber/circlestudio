@@ -1,52 +1,53 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export default function StatusBar() {
   const [time, setTime] = useState('');
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    // Update time
-    const interval = setInterval(() => {
+    const updateClock = () => {
       const date = new Date();
       setTime(date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
-    }, 1000);
+    };
     
-    // Initial set
-    setTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
-
-    // Mouse movement
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Format coordinates to always be 4 digits
-  const formatCoord = (val: number) => val.toString().padStart(4, '0');
-
   return (
-    <div className="absolute bottom-0 left-0 w-full p-8 flex justify-between items-end z-10 pointer-events-none uppercase text-xs tracking-wider opacity-80">
-      {/* Left */}
-      <div className="w-1/3">
-        GMT+8 CN {time || '--:--'} 27°C
+    <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end z-10 pointer-events-none text-[#111111]">
+      {/* Left: Clock */}
+      <div className="text-xs font-mono font-medium tracking-wide">
+        <span className="text-gray-400 mr-2">GMT-7</span>
+        {time || '--:--'}
       </div>
 
-      {/* Center */}
-      <div className="w-1/3 flex justify-center">
-        {formatCoord(mousePos.x)} X {formatCoord(mousePos.y)} Y
-      </div>
+      {/* Right: Pricing / Promo Chip */}
+      <div className="pointer-events-auto flex flex-col items-end gap-3">
+        {/* Main Promo Card */}
+        <div className="bg-[#111111] text-white p-2 rounded-xl flex items-center gap-3 shadow-2xl hover:scale-105 transition-transform cursor-pointer">
+          <div className="bg-white/10 rounded-lg p-1.5 w-12 h-10 flex items-center justify-center overflow-hidden">
+             {/* Abstract mini visual */}
+             <div className="flex gap-0.5">
+               <div className="w-1.5 h-6 bg-red-400 rounded-full mix-blend-screen" />
+               <div className="w-1.5 h-6 bg-blue-400 rounded-full mix-blend-screen -mt-2" />
+               <div className="w-1.5 h-6 bg-purple-400 rounded-full mix-blend-screen mt-1" />
+             </div>
+          </div>
+          <div className="pr-3">
+            <div className="text-sm font-bold leading-tight">Orionix</div>
+            <div className="text-[10px] text-gray-400">only <span className="text-white font-bold">$99</span></div>
+          </div>
+        </div>
 
-      {/* Right */}
-      <div className="w-1/3 flex justify-end">
-        <Globe size={24} strokeWidth={1} />
+        {/* Made in Framer (or React) badge */}
+        <div className="bg-white px-3 py-1.5 rounded-md shadow-sm border border-gray-100 flex items-center gap-2 text-xs font-medium cursor-pointer hover:bg-gray-50 transition-colors">
+          <Sparkles size={12} className="text-black" />
+          Made in React
+        </div>
       </div>
     </div>
   );

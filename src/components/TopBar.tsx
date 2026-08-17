@@ -1,33 +1,29 @@
 import React from 'react';
+import { Sun } from 'lucide-react'; // Using Sun as a substitute for radial flare
 
 export default function TopBar() {
   return (
-    <div className="absolute top-0 left-0 w-full p-8 flex justify-between items-start z-10 pointer-events-none uppercase text-xs tracking-wider">
-      {/* Left */}
-      <div className="flex flex-col gap-6 w-1/4">
-        <h1 className="font-bold text-lg pointer-events-auto">HAOQI.DESIGN</h1>
-        <div className="font-sans font-semibold text-2xl normal-case leading-tight">
-          Design &<br />Engineering
-        </div>
+    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-auto text-[#111111]">
+      {/* Logo */}
+      <div className="flex items-center gap-2">
+        <Sun className="text-red-500" size={28} strokeWidth={2.5} />
+        <span className="font-sans font-bold text-xl tracking-tight">orionix</span>
       </div>
 
-      {/* Center */}
-      <div className="w-1/4 flex justify-center text-center normal-case opacity-90">
-        Thinking in systems.<br />Designing with care.
-      </div>
+      {/* Navigation */}
+      <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+        <button className="hover:opacity-70 transition-opacity">Works</button>
+        <button className="hover:opacity-70 transition-opacity">About</button>
+        <button className="hover:opacity-70 transition-opacity">Pricing</button>
+        <button className="hover:opacity-70 transition-opacity">Services</button>
+        <button className="hover:opacity-70 transition-opacity">Blog</button>
+        <button className="hover:opacity-70 transition-opacity">Pages</button>
+      </nav>
 
-      {/* Right */}
-      <div className="w-1/3 flex flex-col gap-6 pointer-events-auto">
-        <nav className="flex justify-between w-full opacity-80">
-          <button className="hover:text-blue-300 transition-colors">WORK</button>
-          <button className="hover:text-blue-300 transition-colors">CONTACT</button>
-          <button className="hover:text-blue-300 transition-colors">THEME[A]</button>
-          <button className="hover:text-blue-300 transition-colors">SOUND[·]</button>
-        </nav>
-        <p className="normal-case opacity-90 leading-relaxed text-sm">
-          I'm Haoqi Wen, leading Design Engineering and AI exploration at <span className="tracking-widest">██████</span>, engineering, and AI at scale. Outside work, I build design tools for team efficiency.
-        </p>
-      </div>
+      {/* CTA */}
+      <button className="bg-[#111111] text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors shadow-lg">
+        Book a call
+      </button>
     </div>
   );
 }

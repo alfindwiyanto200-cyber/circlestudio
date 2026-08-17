@@ -1,86 +1,101 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Environment, Float, useGLTF, ContactShadows } from '@react-three/drei';
+import React, { useRef, useMemo } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Environment, MeshTransmissionMaterial, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
-function CircleModel() {
-  // We assume the user has placed the file back in public/Circle_3D.glb
-  const { scene } = useGLTF('/Circle_3D.glb');
-  const modelRef = useRef<THREE.Group>(null);
+function GlassDisc({ position, index }: { position: [number, number, number], index: number }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Base rotation for variety
+  const baseRotation = useMemo(() => [
+    Math.random() * Math.PI,
+    (Math.random() - 0.5) * 0.8,
+    (Math.random() - 0.5) * 0.8
+  ], []);
 
-  // Apply the deep blue glossy material
-  useEffect(() => {
-    if (scene) {
-      const material = new THREE.MeshPhysicalMaterial({
-        color: 0x0a1b70, // Deep royal blue
-        emissive: 0x020826,
-        metalness: 0.9,
-        roughness: 0.1,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 2.0,
-      });
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    
+    // Smooth mouse parallax target
+    const targetX = (state.pointer.x * 3);
+    const targetY = (state.pointer.y * 3);
+    
+    // Calculate distance for hover physics
+    // state.pointer is normalized (-1 to 1), map it to approximate world units (e.g., * 10)
+    const pointerWorld = new THREE.Vector2(state.pointer.x * 12, state.pointer.y * 8);
+    const discPos = new THREE.Vector2(position[0], position[1]);
+    const distance = pointerWorld.distanceTo(discPos);
+    
+    // Hover scale spring effect
+    const hoverScale = distance < 3 ? 1.15 : 1;
+    meshRef.current.scale.lerp(new THREE.Vector3(hoverScale, hoverScale, hoverScale), 0.1);
 
-      scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.material = material;
-        }
-      });
-      
-      // Auto-center and scale
-      const box = new THREE.Box3().setFromObject(scene);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const center = new THREE.Vector3();
-      box.getCenter(center);
-      
-      // Center
-      scene.position.x = -center.x;
-      scene.position.y = -center.y;
-      scene.position.z = -center.z;
-      
-      // Scale down to fit screen reasonably (aim for ~10 units wide)
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 14 / maxDim;
-      if (isFinite(scale) && scale > 0) {
-        scene.scale.setScalar(scale);
-      }
-    }
-  }, [scene]);
+    // Rotation parallax (tilt)
+    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotation[0] + targetY * 0.2, 0.08);
+    meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotation[1] + targetX * 0.3, 0.08);
+    
+    // Position parallax (depth/inertia)
+    const depthFactor = 1 + (index * 0.15);
+    meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, position[0] + targetX / depthFactor, 0.05);
+    meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, position[1] + targetY / depthFactor, 0.05);
+  });
 
   return (
-    <group ref={modelRef}>
-      <primitive object={scene} />
-    </group>
+    <mesh ref={meshRef} position={position} castShadow receiveShadow>
+      <cylinderGeometry args={[2.2, 2.2, 0.7, 64]} />
+      <MeshTransmissionMaterial
+        backside
+        samples={4}
+        thickness={2.5}
+        chromaticAberration={1.5}
+        anisotropy={0.3}
+        distortion={0.1}
+        distortionScale={0.2}
+        temporalDistortion={0.05}
+        iridescence={1}
+        iridescenceIOR={1.3}
+        iridescenceThicknessRange={[100, 400]}
+        clearcoat={1}
+        attenuationDistance={1}
+        attenuationColor="#ffffff"
+        color="#ffffff"
+      />
+    </mesh>
   );
 }
 
 export default function Scene() {
-  return (
-    <div className="absolute top-0 left-0 w-full h-full z-0">
-      <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 5]} intensity={1} color="#ffffff" />
-        <pointLight position={[-10, -10, -5]} intensity={2} color="#081452" />
-        
-        {/* Environment map for reflections */}
-        <Environment preset="city" />
-        
-        <Float
-          speed={2} // Animation speed
-          rotationIntensity={0.5} // XYZ rotation intensity
-          floatIntensity={1} // Up/down float intensity
-          floatingRange={[-0.5, 0.5]} // Range of y-axis values the object will float within
-        >
-          {/* We wrap the model in a Suspense-like fallback natively handled by Canvas/useGLTF but to be safe we can let it just load */}
-          <React.Suspense fallback={null}>
-             <CircleModel />
-          </React.Suspense>
-        </Float>
+  // Array of positions to create a wave/arc of discs
+  const discs = useMemo(() => [
+    [-11, 2, -4],
+    [-7.5, 0, -2],
+    [-4, -1.5, 0],
+    [0, -2, 1],
+    [4, -1, 0],
+    [7.5, 1, -2],
+    [11, 3, -4]
+  ], []);
 
-        <ContactShadows position={[0, -5, 0]} opacity={0.4} scale={20} blur={2} far={10} />
+  return (
+    <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-auto">
+      <Canvas camera={{ position: [0, 0, 15], fov: 40 }} dpr={[1, 2]}>
+        <ambientLight intensity={1.5} />
+        <directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
+        <directionalLight position={[-10, -10, -10]} intensity={1} color="#ff00ff" />
+        <pointLight position={[0, 0, 5]} intensity={1} color="#00ffff" />
+        
+        {/* Environment map for realistic glass reflections */}
+        <Environment preset="studio" />
+        
+        <group rotation={[0.2, 0, 0]}>
+          {discs.map((pos, index) => (
+            <GlassDisc key={index} position={pos as [number, number, number]} index={index} />
+          ))}
+        </group>
+
+        <ContactShadows position={[0, -6, 0]} opacity={0.3} scale={40} blur={2.5} far={10} />
       </Canvas>
     </div>
   );
