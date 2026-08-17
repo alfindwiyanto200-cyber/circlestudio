@@ -8,12 +8,11 @@ import * as THREE from 'three';
 function GlassDisc({ position, index }: { position: [number, number, number], index: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Base rotation for variety
-  const baseRotation = useMemo(() => [
+  const [baseRotation] = React.useState(() => [
     Math.random() * Math.PI,
     (Math.random() - 0.5) * 0.8,
     (Math.random() - 0.5) * 0.8
-  ], []);
+  ]);
 
   useFrame((state) => {
     if (!meshRef.current) return;
