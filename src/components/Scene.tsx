@@ -1,120 +1,139 @@
 "use client";
 
-import React, { useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, MeshTransmissionMaterial, ContactShadows } from '@react-three/drei';
-import * as THREE from 'three';
+import React, { useRef, useEffect } from 'react';
+import { motion, useSpring, useMotionValue, useTransform, MotionValue } from 'framer-motion';
 
-// Reusable THREE objects to avoid per-frame allocations (memory leak fix)
-const _vec2Pointer = new THREE.Vector2();
-const _vec2Disc = new THREE.Vector2();
-const _vec3Scale = new THREE.Vector3();
+// Configuration for each glass disc layer overlay
+const DISC_CONFIGS = [
+  { id: 0, x: '-36%', y: '20%', size: 320, depth: 1.8, rotate: -55 },
+  { id: 1, x: '-20%', y: '45%', size: 260, depth: 1.4, rotate: -72 },
+  { id: 2, x: '10%',  y: '62%', size: 180, depth: 1.0, rotate: -82 },
+  { id: 3, x: '35%',  y: '70%', size: 150, depth: 0.8, rotate: -88 },
+  { id: 4, x: '58%',  y: '63%', size: 200, depth: 1.0, rotate: -78 },
+  { id: 5, x: '75%',  y: '40%', size: 270, depth: 1.4, rotate: -60 },
+  { id: 6, x: '90%',  y: '10%', size: 340, depth: 1.8, rotate: -45 },
+];
 
-function GlassDisc({ position, index }: { position: [number, number, number], index: number }) {
-  const meshRef = useRef<THREE.Mesh>(null);
+// Hue values for the iridescent gradient per disc
+const DISC_HUES = [260, 280, 300, 200, 320, 240, 200];
 
-  const [baseRotation] = React.useState(() => [
-    Math.random() * Math.PI,
-    (Math.random() - 0.5) * 0.8,
-    (Math.random() - 0.5) * 0.8
-  ]);
+function GlassDiscOverlay({
+  config,
+  mouseX,
+  mouseY,
+}: {
+  config: (typeof DISC_CONFIGS)[0];
+  mouseX: MotionValue<number>;
+  mouseY: MotionValue<number>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
 
-  useFrame((state) => {
-    if (!meshRef.current) return;
+  // Each disc translates at a different rate (depth parallax)
+  const x       = useTransform(mouseX, (v) => v * config.depth * 30);
+  const y       = useTransform(mouseY, (v) => v * config.depth * 20);
+  const rotateX = useTransform(mouseY, (v) => v * config.depth * -12);
+  const rotateY = useTransform(mouseX, (v) => v * config.depth * 10);
 
-    const targetX = state.pointer.x * 3;
-    const targetY = state.pointer.y * 3;
+  // Spring physics — high damping = smooth inertia, feels heavy/natural
+  const springX    = useSpring(x,       { stiffness: 55, damping: 22, mass: 0.9 });
+  const springY    = useSpring(y,       { stiffness: 55, damping: 22, mass: 0.9 });
+  const springRotX = useSpring(rotateX, { stiffness: 45, damping: 18, mass: 1.3 });
+  const springRotY = useSpring(rotateY, { stiffness: 45, damping: 18, mass: 1.3 });
 
-    // Reuse pre-allocated objects — no new() every frame
-    _vec2Pointer.set(state.pointer.x * 12, state.pointer.y * 8);
-    _vec2Disc.set(position[0], position[1]);
-    const distance = _vec2Pointer.distanceTo(_vec2Disc);
-
-    // Hover scale spring
-    const hoverScale = distance < 3 ? 1.15 : 1;
-    _vec3Scale.set(hoverScale, hoverScale, hoverScale);
-    meshRef.current.scale.lerp(_vec3Scale, 0.1);
-
-    // Rotation parallax (tilt)
-    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotation[0] + targetY * 0.2, 0.08);
-    meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotation[1] + targetX * 0.3, 0.08);
-
-    // Position parallax (depth/inertia)
-    const depthFactor = 1 + index * 0.15;
-    meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, position[0] + targetX / depthFactor, 0.05);
-    meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, position[1] + targetY / depthFactor, 0.05);
-  });
+  const hue = DISC_HUES[config.id] ?? 260;
+  const border = Math.round(config.size * 0.07);
+  const innerBorder = Math.round(config.size * 0.04);
 
   return (
-    <mesh ref={meshRef} position={position}>
-      <cylinderGeometry args={[2.2, 2.2, 0.7, 64]} />
-      <MeshTransmissionMaterial
-        backside
-        samples={2}
-        thickness={2.5}
-        chromaticAberration={1.2}
-        anisotropy={0.2}
-        distortion={0.05}
-        distortionScale={0.1}
-        temporalDistortion={0}
-        iridescence={1}
-        iridescenceIOR={1.3}
-        iridescenceThicknessRange={[100, 400]}
-        clearcoat={1}
-        attenuationDistance={1}
-        attenuationColor="#ffffff"
-        color="#ffffff"
+    <motion.div
+      ref={ref}
+      style={{
+        position: 'absolute',
+        left: config.x,
+        top: config.y,
+        width: config.size,
+        height: config.size,
+        x: springX,
+        y: springY,
+        rotateX: springRotX,
+        rotateY: springRotY,
+        rotate: config.rotate,
+        transformStyle: 'preserve-3d',
+        translateX: '-50%',
+        translateY: '-50%',
+        pointerEvents: 'auto',
+      }}
+      whileHover={{ scale: 1.09 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+    >
+      {/* Outer iridescent ring body */}
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          background: `conic-gradient(
+            from 0deg,
+            hsla(${hue},       100%, 70%, 0.35),
+            hsla(${hue + 60},  100%, 80%, 0.55),
+            hsla(${hue + 120}, 100%, 75%, 0.40),
+            hsla(${hue + 180}, 100%, 70%, 0.35),
+            hsla(${hue + 240}, 100%, 80%, 0.55),
+            hsla(${hue},       100%, 70%, 0.35)
+          )`,
+          border: `${border}px solid rgba(255,255,255,0.22)`,
+          boxShadow: `
+            0 0 ${config.size * 0.14}px hsla(${hue}, 100%, 70%, 0.28),
+            inset 0 0 ${config.size * 0.08}px hsla(${hue + 60}, 100%, 80%, 0.18),
+            0 8px 32px rgba(0,0,0,0.25)
+          `,
+          backdropFilter: 'blur(2px)',
+        }}
       />
-    </mesh>
-  );
-}
-
-function SceneContents() {
-  const discs = useMemo<[number, number, number][]>(() => [
-    [-11, 2, -4],
-    [-7.5, 0, -2],
-    [-4, -1.5, 0],
-    [0, -2, 1],
-    [4, -1, 0],
-    [7.5, 1, -2],
-    [11, 3, -4]
-  ], []);
-
-  return (
-    <>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
-      <directionalLight position={[-10, -10, -10]} intensity={1} color="#ff00ff" />
-      <pointLight position={[0, 0, 5]} intensity={1} color="#00ffff" />
-      <Suspense fallback={null}>
-        <Environment preset="studio" />
-      </Suspense>
-      <group rotation={[0.2, 0, 0]}>
-        {discs.map((pos, index) => (
-          <GlassDisc key={index} position={pos} index={index} />
-        ))}
-      </group>
-      <ContactShadows position={[0, -6, 0]} opacity={0.15} scale={40} blur={2.5} far={10} />
-    </>
+      {/* Inner lens highlight */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '15%',
+          left: '15%',
+          width: '70%',
+          height: '70%',
+          borderRadius: '50%',
+          background: `radial-gradient(ellipse at 35% 35%, rgba(255,255,255,0.16), transparent 65%)`,
+          border: `${innerBorder}px solid rgba(255,255,255,0.10)`,
+        }}
+      />
+    </motion.div>
   );
 }
 
 export default function Scene() {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize to -1 … +1
+      mouseX.set((e.clientX / window.innerWidth  - 0.5) * 2);
+      mouseY.set((e.clientY / window.innerHeight - 0.5) * 2);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
+
   return (
-    <div className="absolute top-0 left-0 w-full h-full z-[1] pointer-events-auto">
-      <Canvas
-        camera={{ position: [0, 0, 15], fov: 40 }}
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        onCreated={({ gl }) => {
-          gl.setClearColor(0x000000, 0); // Transparent background so image shows through
-        }}
-      >
-        <Suspense fallback={null}>
-          <SceneContents />
-        </Suspense>
-      </Canvas>
+    <div
+      className="absolute top-0 left-0 w-full h-full z-[1] overflow-hidden"
+      style={{ perspective: '1200px' }}
+    >
+      {DISC_CONFIGS.map((config) => (
+        <GlassDiscOverlay
+          key={config.id}
+          config={config}
+          mouseX={mouseX}
+          mouseY={mouseY}
+        />
+      ))}
     </div>
   );
 }
-
