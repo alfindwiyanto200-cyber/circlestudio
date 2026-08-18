@@ -8,12 +8,12 @@ export default function TopBar() {
         <img
           src="/logo-3d.gif"
           alt="3D Animated Logo"
-          className="w-9 h-9 object-contain pointer-events-none"
+          className="w-12 h-12 object-contain pointer-events-none"
         />
         <img
           src="/logo-text.png"
           alt="circle"
-          className="h-[20px] object-contain"
+          className="h-[26px] object-contain"
         />
       </div>
 
