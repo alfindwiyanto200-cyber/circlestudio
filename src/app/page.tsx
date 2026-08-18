@@ -2,7 +2,6 @@ import Image from 'next/image';
 import TopBar from '@/components/TopBar';
 import MainHeadline from '@/components/MainHeadline';
 import StatusBar from '@/components/StatusBar';
-import Scene from '@/components/Scene';
 import SideBadge from '@/components/SideBadge';
 import OurClients from '@/components/OurClients';
 import FeaturedWork from '@/components/FeaturedWork';
@@ -17,20 +16,17 @@ export default function Home() {
     <main className="relative w-full bg-black text-white selection:bg-white selection:text-black">
       {/* ── Section 1: Hero ── */}
       <section className="relative w-full h-screen overflow-hidden">
-        {/* Background Image */}
+        {/* Background GIF */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/gambar baground.png"
-            alt="Glass Rings Background"
+            src="/Holographic_glass_disks_moving_s…_202608181602.gif"
+            alt="Holographic glass disks moving background"
             fill
             priority
+            unoptimized
             className="object-cover object-center"
-            quality={95}
           />
         </div>
-
-        {/* React Three Fiber Scene for the Glass Discs (overlaid, transparent) */}
-        <Scene />
 
         {/* UI Overlay */}
         <TopBar />
