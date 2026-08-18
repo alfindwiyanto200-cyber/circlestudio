@@ -4,7 +4,7 @@ export default function TopBar() {
   return (
     <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-auto text-black">
       {/* Logo */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
         <img
           src="/logo-3d.gif"
           alt="3D Animated Logo"
