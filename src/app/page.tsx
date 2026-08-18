@@ -5,6 +5,7 @@ import StatusBar from '@/components/StatusBar';
 import Scene from '@/components/Scene';
 import SideBadge from '@/components/SideBadge';
 import OurClients from '@/components/OurClients';
+import FeaturedWork from '@/components/FeaturedWork';
 
 export default function Home() {
   return (
@@ -35,6 +36,9 @@ export default function Home() {
 
       {/* ── Section 2: Our Clients ── */}
       <OurClients />
+
+      {/* ── Section 3: Featured Work ── */}
+      <FeaturedWork />
     </main>
   );
 }
