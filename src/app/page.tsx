@@ -18,13 +18,10 @@ export default function Home() {
       <section className="relative w-full h-screen overflow-hidden">
         {/* Background GIF */}
         <div className="absolute inset-0 z-0">
-          <Image
+          <img
             src="/hero_bg.gif"
             alt="Holographic glass disks moving background"
-            fill
-            priority
-            unoptimized
-            className="object-cover object-center"
+            className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
           />
         </div>
 
