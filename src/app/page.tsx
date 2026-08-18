@@ -14,6 +14,9 @@ import Footer from '@/components/Footer';
 export default function Home() {
   return (
     <main className="relative w-full bg-[#FAFAFA] text-[#111111] selection:bg-black selection:text-white">
+      {/* Global Fixed Side Badge */}
+      <SideBadge />
+
       {/* ── Section 1: Hero ── */}
       <section className="relative w-full h-screen overflow-hidden bg-[#FAFAFA]">
         {/* Background Video */}
@@ -32,7 +35,6 @@ export default function Home() {
         <TopBar />
         <MainHeadline />
         <StatusBar />
-        <SideBadge />
       </section>
 
       {/* ── Section 2: Our Clients ── */}
