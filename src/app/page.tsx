@@ -13,13 +13,13 @@ import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
-    <main className="relative w-full bg-black text-white selection:bg-white selection:text-black">
+    <main className="relative w-full bg-[#FAFAFA] text-[#111111] selection:bg-black selection:text-white">
       {/* ── Section 1: Hero ── */}
       <section className="relative w-full h-screen overflow-hidden">
         {/* Background GIF */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/Holographic_glass_disks_moving_s…_202608181602.gif"
+            src="/hero_bg.gif"
             alt="Holographic glass disks moving background"
             fill
             priority
