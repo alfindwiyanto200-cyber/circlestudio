@@ -6,7 +6,7 @@ export default function SideBadge() {
       <img
         src="/pinggir-kiri.png"
         alt="Side Badge"
-        className="w-[40px] md:w-[50px] h-auto object-contain"
+        className="w-[54px] md:w-[72px] h-auto object-contain"
       />
     </div>
   );
