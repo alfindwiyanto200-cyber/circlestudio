@@ -27,14 +27,6 @@ const TESTIMONIALS = [
   },
 ] as const;
 
-/* ─────────────────────────────────────────────
-   Metrics data
-───────────────────────────────────────────── */
-const METRICS = [
-  { value: '50+', label: 'Projects Completed' },
-  { value: '99%', label: 'Satisfaction Rate' },
-  { value: '10+', label: 'Years Experience' },
-] as const;
 
 /* ─────────────────────────────────────────────
    Insights / Articles data
@@ -200,29 +192,7 @@ export default function ClientVoicesInsights() {
             ))}
           </div>
 
-          {/* Stats Metric Counters Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={inViewVoices ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="border-t border-[#EBEBEB] pt-12 grid grid-cols-1 md:grid-cols-3 gap-8 items-center"
-          >
-            {METRICS.map((m) => (
-              <div key={m.label} className="text-center md:text-left">
-                <span
-                  className="text-[3.2rem] font-bold text-[#111] leading-none tracking-tight font-serif"
-                >
-                  {m.value}
-                </span>
-                <span
-                  className="block text-[12px] text-neutral-500 mt-2 uppercase tracking-widest"
-                  style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
-                >
-                  {m.label}
-                </span>
-              </div>
-            ))}
-          </motion.div>
+
         </div>
       </section>
 
