@@ -50,7 +50,7 @@ function MarqueeRow({ logos, direction, duration, revealDelay = 0 }: MarqueeRowP
       onMouseLeave={() => setPaused(false)}
     >
       <div
-        className="flex gap-3 w-max"
+        className="flex gap-5 w-max"
         style={{
           animation: `${direction === 'left' ? 'marquee-left' : 'marquee-right'} ${duration}s linear infinite`,
           animationPlayState: paused ? 'paused' : 'running',
@@ -80,14 +80,14 @@ function LogoChip({ name }: { name: string }) {
         group
         flex-shrink-0
         flex items-center justify-center
-        px-6 py-3.5
-        rounded-xl
+        px-9 py-5
+        rounded-2xl
         border border-[#E2E2E2]
         bg-white
         shadow-[0_1px_3px_rgba(0,0,0,0.05)]
         cursor-default select-none
         hover:border-[#BDBDBD]
-        hover:shadow-[0_4px_18px_rgba(0,0,0,0.10)]
+        hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)]
         transition-shadow duration-300
       "
       style={{ opacity: 0.38 }}
@@ -102,7 +102,7 @@ function LogoChip({ name }: { name: string }) {
     >
       <span
         className="
-          font-semibold text-[14px] tracking-tight
+          font-semibold text-[17px] tracking-tight
           text-[#111]
           whitespace-nowrap
         "
