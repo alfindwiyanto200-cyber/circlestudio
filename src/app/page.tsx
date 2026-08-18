@@ -8,6 +8,8 @@ import OurClients from '@/components/OurClients';
 import FeaturedWork from '@/components/FeaturedWork';
 import DialServices from '@/components/DialServices';
 import HowWeWork from '@/components/HowWeWork';
+import Pricing from '@/components/Pricing';
+import ClientVoicesInsights from '@/components/ClientVoicesInsights';
 
 export default function Home() {
   return (
@@ -47,6 +49,12 @@ export default function Home() {
 
       {/* ── Section 5: How We Work ── */}
       <HowWeWork />
+
+      {/* ── Section 6: Pricing ── */}
+      <Pricing />
+
+      {/* ── Section 7: Client Voices & Insights ── */}
+      <ClientVoicesInsights />
     </main>
   );
 }
