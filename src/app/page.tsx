@@ -11,7 +11,7 @@ import HowWeWork from '@/components/HowWeWork';
 
 export default function Home() {
   return (
-    <main className="relative w-screen overflow-x-hidden bg-black text-white selection:bg-white selection:text-black">
+    <main className="relative w-full bg-black text-white selection:bg-white selection:text-black">
       {/* ── Section 1: Hero ── */}
       <section className="relative w-full h-screen overflow-hidden">
         {/* Background Image */}
