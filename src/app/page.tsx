@@ -10,6 +10,7 @@ import DialServices from '@/components/DialServices';
 import HowWeWork from '@/components/HowWeWork';
 import Pricing from '@/components/Pricing';
 import ClientVoicesInsights from '@/components/ClientVoicesInsights';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
@@ -55,6 +56,9 @@ export default function Home() {
 
       {/* ── Section 7: Client Voices & Insights ── */}
       <ClientVoicesInsights />
+
+      {/* ── Footer ── */}
+      <Footer />
     </main>
   );
 }
