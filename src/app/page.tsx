@@ -15,12 +15,15 @@ export default function Home() {
   return (
     <main className="relative w-full bg-[#FAFAFA] text-[#111111] selection:bg-black selection:text-white">
       {/* ── Section 1: Hero ── */}
-      <section className="relative w-full h-screen overflow-hidden">
-        {/* Background GIF */}
+      <section className="relative w-full h-screen overflow-hidden bg-[#FAFAFA]">
+        {/* Background Video */}
         <div className="absolute inset-0 z-0">
-          <img
-            src="/hero_bg.gif"
-            alt="Holographic glass disks moving background"
+          <video
+            src="/hero_bg.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
             className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
           />
         </div>
