@@ -1,13 +1,20 @@
 import React from 'react';
-import { Sun } from 'lucide-react'; // Using Sun as a substitute for radial flare
 
 export default function TopBar() {
   return (
     <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pointer-events-auto text-black">
       {/* Logo */}
-      <div className="flex items-center gap-2">
-        <Sun className="text-red-500" size={28} strokeWidth={2.5} />
-        <span className="font-sans font-bold text-xl tracking-tight">orionix</span>
+      <div className="flex items-center gap-3">
+        <img
+          src="/logo-3d.gif"
+          alt="3D Animated Logo"
+          className="w-9 h-9 object-contain pointer-events-none"
+        />
+        <img
+          src="/logo-text.png"
+          alt="circle"
+          className="h-[20px] object-contain"
+        />
       </div>
 
       {/* Navigation */}
