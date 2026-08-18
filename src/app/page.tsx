@@ -6,6 +6,7 @@ import Scene from '@/components/Scene';
 import SideBadge from '@/components/SideBadge';
 import OurClients from '@/components/OurClients';
 import FeaturedWork from '@/components/FeaturedWork';
+import HowWeWork from '@/components/HowWeWork';
 
 export default function Home() {
   return (
@@ -39,6 +40,9 @@ export default function Home() {
 
       {/* ── Section 3: Featured Work ── */}
       <FeaturedWork />
+
+      {/* ── Section 4: How We Work ── */}
+      <HowWeWork />
     </main>
   );
 }
