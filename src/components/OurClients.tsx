@@ -1,138 +1,132 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 
-/* ─────────────────────────────────────────────
-   Brand data
-   Each card carries its own float profile so
-   no two cards move identically.
-───────────────────────────────────────────── */
-interface Brand {
-  name: string;
-  row: number;
-  /** Floating amplitude Y in px  (8–12) */
-  ampY: number;
-  /** Floating amplitude X in px  (2–5) */
-  ampX: number;
-  /** Full cycle duration in seconds (3–6) */
-  dur: number;
-  /** Initial delay before float starts (0–2) */
-  floatDelay: number;
-  /** Resting opacity before hover (0.45 – 0.65) */
-  baseOpacity: number;
+/* ─────────────────────────────────────────────────────────
+   Logo data
+   Arrays are deliberately different across rows so the
+   visual content never lines up in a rigid column.
+───────────────────────────────────────────────────────── */
+const ROW_1 = ['PictelAI', 'Shutterframe', 'Convergence', 'CoreOS', 'Warpspeed', 'Layers'];
+const ROW_2 = ['Ikigai Labs', 'Frame', 'Visionwork', 'Orbit', 'Nexio', 'Shutterframe'];
+const ROW_3 = ['Convergence', 'Warpspeed', 'PictelAI', 'Ikigai Labs', 'CoreOS', 'Frame'];
+
+/* ─────────────────────────────────────────────────────────
+   MarqueeRow
+   • Duplicates logo array 2× so the strip is exactly 2×
+     viewport-wide → animating to -50% = seamless loop
+   • direction: 'left' | 'right'
+   • duration: seconds for one full pass
+   • Pause-on-hover via animationPlayState
+───────────────────────────────────────────────────────── */
+interface MarqueeRowProps {
+  logos: string[];
+  direction: 'left' | 'right';
+  duration: number;
+  revealDelay?: number;
 }
 
-const BRANDS: Brand[] = [
-  // ── Row 0 ──
-  { name: 'PictelAI',     row: 0, ampY: 10, ampX: 3, dur: 4.2, floatDelay: 0.0, baseOpacity: 0.55 },
-  { name: 'Shutterframe', row: 0, ampY:  8, ampX: 2, dur: 5.1, floatDelay: 0.6, baseOpacity: 0.50 },
-  { name: 'Convergence',  row: 0, ampY: 12, ampX: 4, dur: 3.8, floatDelay: 1.1, baseOpacity: 0.60 },
-  // ── Row 1 ──
-  { name: 'CoreOS',       row: 1, ampY:  9, ampX: 3, dur: 5.5, floatDelay: 0.3, baseOpacity: 0.45 },
-  { name: 'Warpspeed',    row: 1, ampY: 11, ampX: 5, dur: 4.0, floatDelay: 0.9, baseOpacity: 0.55 },
-  { name: 'Ikigai Labs',  row: 1, ampY:  8, ampX: 2, dur: 6.0, floatDelay: 1.5, baseOpacity: 0.50 },
-  // ── Row 2 ──
-  { name: 'Frame',        row: 2, ampY: 12, ampX: 4, dur: 3.5, floatDelay: 0.5, baseOpacity: 0.60 },
-  { name: 'Layers',       row: 2, ampY:  9, ampX: 3, dur: 4.8, floatDelay: 1.2, baseOpacity: 0.48 },
-  { name: 'Visionwork',   row: 2, ampY: 10, ampX: 2, dur: 5.3, floatDelay: 0.0, baseOpacity: 0.55 },
-];
+function MarqueeRow({ logos, direction, duration, revealDelay = 0 }: MarqueeRowProps) {
+  const [paused, setPaused] = useState(false);
+  // Duplicate 2× for seamless loop
+  const strip = [...logos, ...logos];
 
-/* Horizontal stagger offset per row */
-const ROW_OFFSETS = ['0px', '36px', '18px'];
-
-/* ─────────────────────────────────────────────
-   LogoCard
-   Layered motion:
-   1. whileInView  → scroll reveal (fade + slide-up)
-   2. animate      → perpetual organic float (Y + subtle X)
-   3. whileHover   → spring snap to full opacity + scale
-───────────────────────────────────────────── */
-function LogoCard({
-  brand,
-  revealDelay,
-}: {
-  brand: Brand;
-  revealDelay: number;
-}) {
-  const { name, ampY, ampX, dur, floatDelay, baseOpacity } = brand;
-
-  /*
-   * Framer Motion can't do CSS keyframe loops natively on the
-   * same axis as whileInView, so we split the concerns:
-   *   – outer wrapper handles reveal + hover
-   *   – inner div handles the perpetual float
-   */
   return (
-    /* ── Reveal + Hover wrapper ── */
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: baseOpacity, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: revealDelay }}
-      whileHover={{
-        opacity: 1,
-        scale: 1.08,
-        transition: {
-          type: 'spring',
-          stiffness: 340,
-          damping: 22,
-          mass: 0.8,
-        },
+      /* Gradient mask – logos fade in from left, out to right */
+      className="relative overflow-hidden"
+      style={{
+        maskImage:
+          'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
+        WebkitMaskImage:
+          'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
       }}
-      className="
-        flex items-center justify-center
-        px-6 py-[18px]
-        border border-[#E2E2E2]
-        rounded-2xl
-        bg-white
-        shadow-[0_1px_3px_rgba(0,0,0,0.07)]
-        cursor-default select-none
-        hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)]
-        hover:border-[#C8C8C8]
-      "
-      style={{ willChange: 'transform, opacity' }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      {/* ── Perpetual float layer ── */}
-      <motion.div
-        animate={{
-          y: [0, -ampY, 0, ampY * 0.6, 0],
-          x: [0, ampX, 0, -ampX * 0.7, 0],
-        }}
-        transition={{
-          duration: dur,
-          delay: floatDelay,
-          repeat: Infinity,
-          repeatType: 'loop',
-          ease: 'easeInOut',
+      <div
+        className="flex gap-3 w-max"
+        style={{
+          animation: `${direction === 'left' ? 'marquee-left' : 'marquee-right'} ${duration}s linear infinite`,
+          animationPlayState: paused ? 'paused' : 'running',
         }}
       >
-        <span
-          className="font-semibold text-[15px] tracking-tight text-[#333]"
-          style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
-        >
-          {name}
-        </span>
-      </motion.div>
+        {strip.map((name, idx) => (
+          <LogoChip key={`${name}-${idx}`} name={name} />
+        ))}
+      </div>
     </motion.div>
   );
 }
 
-/* ─────────────────────────────────────────────
-   Main section
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────
+   LogoChip
+   • Resting: opacity-35, gray text
+   • Hover:   opacity-100, #111, scale up, shadow
+───────────────────────────────────────────────────────── */
+function LogoChip({ name }: { name: string }) {
+  return (
+    <motion.div
+      whileHover={{
+        scale: 1.07,
+        transition: { type: 'spring', stiffness: 380, damping: 22, mass: 0.7 },
+      }}
+      className="
+        group
+        flex-shrink-0
+        flex items-center justify-center
+        px-6 py-3.5
+        rounded-xl
+        border border-[#E2E2E2]
+        bg-white
+        shadow-[0_1px_3px_rgba(0,0,0,0.05)]
+        cursor-default select-none
+        hover:border-[#BDBDBD]
+        hover:shadow-[0_4px_18px_rgba(0,0,0,0.10)]
+        transition-shadow duration-300
+      "
+      style={{ opacity: 0.38 }}
+      /* Framer can't animate CSS opacity via group-hover;
+         handle hover opacity with CSS custom property trick */
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.opacity = '1')
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.opacity = '0.38')
+      }
+    >
+      <span
+        className="
+          font-semibold text-[14px] tracking-tight
+          text-[#111]
+          whitespace-nowrap
+        "
+        style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
+      >
+        {name}
+      </span>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   Main Section
+───────────────────────────────────────────────────────── */
 export default function OurClients() {
   const headlineRef = useRef<HTMLDivElement>(null);
   const inView = useInView(headlineRef, { once: true, margin: '-80px' });
-
-  const rows = [0, 1, 2].map((r) => BRANDS.filter((b) => b.row === r));
 
   return (
     <section
       id="our-clients"
       className="relative w-full bg-[#FAFAFA] border-t border-[#EBEBEB] overflow-hidden"
     >
-      {/* Top hairline gradient */}
+      {/* Top hairline */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
@@ -142,15 +136,13 @@ export default function OurClients() {
         }}
       />
 
-      <div className="max-w-[1280px] mx-auto px-6 md:px-12 lg:px-20 py-24 md:py-32">
-        <div className="flex flex-col lg:flex-row gap-16 lg:gap-24">
+      <div className="max-w-[1340px] mx-auto px-6 md:px-12 lg:px-20 py-24 md:py-32">
+        <div className="flex flex-col lg:flex-row gap-14 lg:gap-20 items-start">
 
-          {/* ────────────────────────────────
-              Left column — sticky text
-          ──────────────────────────────── */}
+          {/* ── Left column: sticky info text ── */}
           <div
             ref={headlineRef}
-            className="lg:w-[38%] lg:sticky lg:top-32 self-start"
+            className="lg:w-[36%] flex-shrink-0 lg:sticky lg:top-32 self-start"
           >
             {/* Badge */}
             <motion.div
@@ -174,7 +166,7 @@ export default function OurClients() {
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
               className="
-                text-[2.6rem] md:text-[3.2rem] lg:text-[3.7rem]
+                text-[2.6rem] md:text-[3.2rem] lg:text-[3.6rem]
                 leading-[1.04] font-bold tracking-[-0.035em]
                 text-[#111] font-serif
               "
@@ -184,12 +176,12 @@ export default function OurClients() {
               enterprises
             </motion.h2>
 
-            {/* Supporting copy */}
+            {/* Body copy */}
             <motion.p
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, ease: 'easeOut', delay: 0.22 }}
-              className="mt-6 text-[15px] leading-relaxed text-[#777] max-w-[290px]"
+              className="mt-6 text-[15px] leading-relaxed text-[#777] max-w-[280px]"
               style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
             >
               From early-stage startups to Fortune 500 leaders — brands rely on
@@ -222,35 +214,37 @@ export default function OurClients() {
             </motion.div>
           </div>
 
-          {/* ────────────────────────────────
-              Right column — floating logo cloud
-          ──────────────────────────────── */}
-          <div className="lg:w-[62%] flex flex-col gap-5">
-            {rows.map((row, rIdx) => (
-              <div
-                key={rIdx}
-                className="flex flex-wrap gap-3 sm:gap-4"
-                style={{ paddingLeft: ROW_OFFSETS[rIdx] }}
-              >
-                {row.map((brand, bIdx) => (
-                  <LogoCard
-                    key={brand.name}
-                    brand={brand}
-                    /* stagger: each row starts 80ms after the previous,
-                       each card within a row 65ms apart              */
-                    revealDelay={rIdx * 0.08 + bIdx * 0.065}
-                  />
-                ))}
-              </div>
-            ))}
+          {/* ── Right column: 3-row marquee cloud ── */}
+          <div className="lg:w-[64%] flex flex-col gap-3.5 overflow-hidden">
+            {/* Row 1 → scrolls left at medium speed */}
+            <MarqueeRow
+              logos={ROW_1}
+              direction="left"
+              duration={28}
+              revealDelay={0.0}
+            />
+            {/* Row 2 → scrolls right (creates counter-motion depth) */}
+            <MarqueeRow
+              logos={ROW_2}
+              direction="right"
+              duration={34}
+              revealDelay={0.08}
+            />
+            {/* Row 3 → scrolls left at slightly faster pace */}
+            <MarqueeRow
+              logos={ROW_3}
+              direction="left"
+              duration={24}
+              revealDelay={0.16}
+            />
 
             {/* NDA note */}
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: 0.65 }}
-              className="mt-4 text-[11.5px] text-[#C0C0C0] tracking-wide"
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-3 text-[11.5px] text-[#C0C0C0] tracking-wide pl-1"
               style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
             >
               + many more under NDA
