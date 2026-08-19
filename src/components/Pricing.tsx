@@ -203,20 +203,7 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                {/* Price */}
-                <div className="mb-6 flex items-baseline gap-1">
-                  <span className="text-[2.2rem] font-bold tracking-tight font-serif">
-                    {plan.price}
-                  </span>
-                  <span
-                    className={`text-[13px] uppercase tracking-wider ${
-                      isScale ? 'text-neutral-400' : 'text-neutral-500'
-                    }`}
-                    style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
-                  >
-                    {plan.period}
-                  </span>
-                </div>
+
 
                 {/* Button */}
                 <button
