@@ -1,6 +1,6 @@
 import TopBar from '@/components/TopBar';
 import SideBadge from '@/components/SideBadge';
-import FeaturedWork from '@/components/FeaturedWork';
+import WorksArchive from '@/components/WorksArchive';
 import Footer from '@/components/Footer';
 
 export default function WorksPage() {
@@ -14,7 +14,7 @@ export default function WorksPage() {
 
       {/* Works Archive Grid - Headline, search, filter and projects */}
       <div className="pt-16 md:pt-20">
-        <FeaturedWork />
+        <WorksArchive />
       </div>
 
       {/* Footer */}
