@@ -173,19 +173,19 @@ const STEPS = [
     num: '01',
     icon: <IconDiscovery />,
     title: 'Discovery',
-    desc: 'Deeply understanding your business, market, and challenges to uncover insights for a strong digital foundation.',
+    desc: 'Membedah inti bisnis, perilaku pasar, dan tantangan audiens untuk menemukan wawasan kunci sebagai fondasi digital yang kuat.',
   },
   {
     num: '02',
     icon: <IconStrategy />,
     title: 'Strategy',
-    desc: 'We define brand positioning, digital direction, and user experience structure to ensure every design decision aligns with your long-term growth.',
+    desc: 'Merancang positioning brand, struktur pengalaman pengguna, dan peta jalan digital agar setiap langkah selaras dengan target pertumbuhan.',
   },
   {
     num: '03',
     icon: <IconDesign />,
-    title: 'Design',
-    desc: 'Our team crafts branding, UI/UX, and visual systems that transform complex ideas into clear, engaging digital experiences.',
+    title: 'Design & Build',
+    desc: 'Mewujudkan strategi menjadi identitas visual, UI/UX presisi, dan aset digital modern yang berdaya pikat serta mendorong konversi.',
   },
 ];
 
@@ -334,7 +334,7 @@ export default function HowWeWork() {
                 max-w-[540px]
               "
             >
-              From Complexity<br />to Clarity in 3 Steps
+              Mengubah Kompleksitas<br />Menjadi Dampak Nyata.
             </motion.h2>
 
             <motion.p
@@ -347,7 +347,7 @@ export default function HowWeWork() {
               "
               style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}
             >
-              A clear, repeatable process that turns ambition into measurable results — every time.
+              Proses terstruktur dan terukur untuk mengubah ambisi brand Anda menjadi performa digital yang nyata.
             </motion.p>
           </div>
         </div>
